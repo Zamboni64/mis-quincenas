@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "1.1";
+var VERSION_APP = "1.2";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -171,8 +171,23 @@ function renderDatos() {
 }
 /* ---------- MÁS: otros gastos fijos ---------- */
 function mesLargo(k) { return k ? Motor.mesTxt(k) : ""; }
+// Compara lo libre de las próximas quincenas con y sin los gastos fijos agregados.
+function impactoFijos(cuantas) {
+  if (!S.P || !(S.P.fijosExtra || []).length || !S.calc) return [];
+  var sin = JSON.parse(JSON.stringify(S.P)); sin.fijosExtra = [];
+  var base = Motor.calcular(sin, S.ingresos).porFecha, actual = quincenaDe(hoyISO());
+  return S.calc.quincenas.filter(function (q) { return q.fecha >= actual; }).slice(0, cuantas)
+    .map(function (q) { return { fecha: q.fecha, sin: base[q.fecha].libre, con: q.libre, dif: q.libre - base[q.fecha].libre }; });
+}
 function renderFijos() {
   var lista = (S.P && S.P.fijosExtra) || [];
+  var imp = impactoFijos(8), box = $("impactoFijos"); box.hidden = !imp.length;
+  if (imp.length) {
+    var totalMes = 0; lista.forEach(function (x) { totalMes += x.valor || 0; });
+    box.innerHTML = '<p class="small muted" style="margin:10px 0 6px">Estos gastos suman ' + money(totalMes) + ' al mes. Así cambia lo libre de cada quincena:</p>' +
+      '<div class="scroll"><table class="num"><thead><tr><th>Pago</th><th>Sin ellos</th><th>Con ellos</th><th>Diferencia</th></tr></thead><tbody>' +
+      imp.map(function (r) { return '<tr><td>' + esc(corto(r.fecha)) + '</td><td>' + money(r.sin) + '</td><td><b>' + money(r.con) + '</b></td><td>' + (r.dif ? money(r.dif) : "igual") + '</td></tr>'; }).join("") + '</tbody></table></div>';
+  }
   $("listaFijos").innerHTML = lista.length ? lista.map(function (x) {
     return '<div class="item"><div class="tx"><b>' + esc(x.nombre) + '</b><span>Día ' + esc(x.dia) + ' · desde ' + esc(mesLargo(x.desde)) + ' · ' + (x.automatico ? "se debita solo" : "lo paga usted") + '</span></div>' +
       '<div class="amt num">' + money(x.valor) + '</div><button class="del" data-fijo="' + esc(x.id) + '">Quitar</button></div>'; }).join("") : '<div class="empty">No ha agregado gastos fijos.</div>';
@@ -351,6 +366,11 @@ function armarResumen() {
   if (S.calc) {
     L.push("", "PRÓXIMAS QUINCENAS (libre después de pagos fijos, deudas y ahorro)");
     S.calc.quincenas.filter(function (q) { return q.fecha > actual; }).slice(0, 4).forEach(function (q) { L.push("- Pago del " + corto(q.fecha) + ": " + money(S.ajustes[q.fecha] != null ? S.ajustes[q.fecha] + q.extra : q.libre)); });
+    var fx = S.P.fijosExtra || [];
+    if (fx.length) { L.push("", "OTROS GASTOS FIJOS QUE AGREGUÉ (ya están descontados de lo libre de arriba)");
+      fx.forEach(function (x) { L.push("- " + x.nombre + ": " + money(x.valor) + " al mes, día " + x.dia + ", desde " + Motor.mesTxt(x.desde)); });
+      L.push("Sin esos gastos, lo libre sería:");
+      impactoFijos(5).slice(1).forEach(function (r) { L.push("- Pago del " + corto(r.fecha) + ": " + money(r.sin) + " (diferencia " + money(r.dif) + ")"); }); }
     var al = pagosEnAlerta(); L.push("", "PAGOS QUE HAGO YO MISMO");
     if (al.length) al.forEach(function (p) { L.push("- " + p.nombre + ": " + money(p.valor) + ", " + estadoPago(p, hoy).t.toLowerCase() + " (" + corto(p.fecha) + ")"); }); else L.push("- Ninguno vencido ni por vencer");
     var pl = S.calc.plan, mesKey = hoy.slice(0, 7), fila = pl.filas.filter(function (f) { return f.mes === mesKey; })[0] || pl.filas[0];
