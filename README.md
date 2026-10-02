@@ -13,6 +13,8 @@ No usa frameworks ni herramientas de compilación: es HTML, CSS y JavaScript pur
 | `js/motor.js` | Los cálculos: quincenas, plan de deudas, reparto de ingresos, pagos y el generador del Excel. No toca la pantalla. |
 | `js/almacen.js` | Guarda y lee los datos en el teléfono (IndexedDB). |
 | `js/app.js` | La interfaz: dibuja las pantallas y responde a los botones. |
+| `js/nube.js` | Sincronización con Firebase: inicio de sesión y copia de los cambios entre dispositivos. |
+| `js/firebase-config.js` | Identificadores del proyecto de Firebase. No son secretos. |
 | `sw.js` | *Service worker*: guarda los archivos para que la app abra sin internet. |
 | `manifest.webmanifest` | Nombre, ícono y colores con los que se instala. |
 | `icons/` | Íconos de la app. |
@@ -63,9 +65,37 @@ El repositorio es público, así que cualquiera puede ver el código. Por eso el
 
 En el iPhone, la app instalada y Safari guardan los datos por separado. Use siempre la app instalada.
 
+## Sincronización entre dispositivos
+
+La app guarda siempre en el dispositivo. Si además inicia sesión (pestaña **Más → Sincronización**), cada cambio se copia a Firestore y llega a los demás dispositivos donde tenga la sesión abierta. Sin internet sigue funcionando y sincroniza al volver la señal.
+
+- Cada registro lleva una fecha de modificación (`mod`). Cuando dos dispositivos tienen versiones distintas, gana la más reciente.
+- Borrar no elimina el registro: lo marca con `borrado: true`, para que el borrado también viaje.
+- La primera vez que un dispositivo inicia sesión, los datos del presupuesto que estén en la nube mandan sobre los locales; los gastos e ingresos de ambos lados se unen.
+
+Configuración en la consola de Firebase (proyecto `mis-quincenas`):
+
+1. **Authentication**: método *Correo electrónico/contraseña* activado, y `zamboni64.github.io` en los dominios autorizados.
+2. **Firestore**: base de datos en modo de producción con estas reglas (pestaña *Reglas*):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+Con esas reglas, cada cuenta solo puede leer y escribir sus propios datos.
+
+3. Después de crear su cuenta desde la app, puede desactivar el registro de cuentas nuevas en **Authentication → Configuración → Acciones del usuario**.
+
 ## Respaldo
 
-Los datos viven solo en el teléfono. En la pestaña **Más → Respaldo**, "Guardar respaldo" crea un archivo `.json` con todo; guárdelo en Archivos o en iCloud Drive. "Restaurar un respaldo" reemplaza lo que haya en la app por lo que trae el archivo.
+En la pestaña **Más → Respaldo**, "Guardar respaldo" crea un archivo `.json` con todo; guárdelo en Archivos o en iCloud Drive. "Restaurar un respaldo" reemplaza lo que haya en la app por lo que trae el archivo.
 
 Haga un respaldo al menos una vez por quincena.
 
@@ -77,11 +107,12 @@ git commit -m "Describa aquí el cambio"
 git push
 ```
 
-GitHub Pages se actualiza solo. En el teléfono el cambio se ve la **segunda** vez que abre la app: la primera muestra la copia guardada y descarga la nueva en segundo plano.
+**Antes de publicar, suba el número de `VERSION` en `sw.js`** (por ejemplo de `"2.1"` a `"2.2"`) y el de `VERSION_APP` en `js/app.js`. Ese cambio es el que le avisa a cada dispositivo que hay archivos nuevos. Sin él, los dispositivos siguen mostrando la versión guardada.
+
+GitHub Pages se actualiza solo en uno o dos minutos. En cada dispositivo, al abrir la app se descargan todos los archivos nuevos en segundo plano y la app se recarga sola una vez. La versión instalada se ve abajo en la pestaña **Más**.
 
 ## Pendiente para siguientes etapas
 
-- Sincronización con la nube.
 - Recordatorios de pagos.
 - Chat integrado con Claude (hoy se usa "Copiar resumen" en la pestaña Más).
 - Editar desde la app la lista de personas que le deben plata.

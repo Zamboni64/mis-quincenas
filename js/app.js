@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "2.0";
+var VERSION_APP = "2.1";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -462,5 +462,22 @@ document.addEventListener("visibilitychange", function () {
   render();
 });
 // El "service worker" guarda los archivos de la app para que abra sin internet.
-if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+if ("serviceWorker" in navigator) {
+  // Cuando entra en funciones una versión nueva del service worker, la página se recarga una vez para usarla completa.
+  var yaControlada = !!navigator.serviceWorker.controller, recargaPendiente = false;
+  var escribiendo = function () { var a = document.activeElement; return !!a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName); };
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!yaControlada) { yaControlada = true; return; } // primera instalación: no hay nada que recargar
+    if (escribiendo()) recargaPendiente = true; else location.reload();
+  });
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").then(function (reg) {
+      // Al volver a la app se pregunta si hay versión nueva (en el iPhone la app instalada no se recarga sola).
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) { if (recargaPendiente) location.reload(); return; }
+        reg.update().catch(function () {});
+      });
+    }).catch(function () {});
+  });
+}
 })();
