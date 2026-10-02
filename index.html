@@ -18,7 +18,10 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>Mis Quincenas</h1>
+    <div class="apps" id="apps" role="group" aria-label="Sección de la app">
+      <button type="button" data-modo="quincenas" aria-pressed="true">Mis Quincenas</button>
+      <button type="button" data-modo="comidas" aria-pressed="false">Mis comidas</button>
+    </div>
     <span class="small muted num" id="hoyTxt"></span>
   </div>
 
@@ -164,8 +167,8 @@
     </div>
   </section>
 
-  <!-- ===================== COMIDA ===================== -->
-  <section class="tab" id="tab-comida" hidden>
+  <!-- ===================== MIS COMIDAS: DESPENSA ===================== -->
+  <section class="tab" id="tab-despensa" hidden>
     <div class="card hero" id="cHero">
       <div class="lab">Con lo que tiene en la cocina</div>
       <div class="big num" id="cBig">–</div>
@@ -173,21 +176,10 @@
     </div>
     <div class="note warn" id="cAlertas" hidden></div>
     <div class="card">
-      <label>Días a la semana que almuerza fuera de casa
-        <select id="cFuera"><option value="0">Ninguno: almuerzo siempre en casa</option><option value="1">1 día</option><option value="2">2 días</option><option value="3">3 días</option><option value="4">4 días</option><option value="5">5 días</option><option value="6">6 días</option><option value="7">Todos los días</option></select>
+      <label>Esta semana, ¿cuántos días almuerza fuera de casa?
+        <select id="cFuera"><option value="0">Ninguno: esta semana almuerzo en casa</option><option value="1">1 día</option><option value="2">2 días</option><option value="3">3 días</option><option value="4">4 días</option><option value="5">5 días</option><option value="6">6 días</option><option value="7">Todos los días</option></select>
       </label>
-      <div class="small muted" id="cFueraMsg" role="status" style="margin-top:6px">Esos almuerzos no gastan despensa, así que la comida le dura más días.</div>
-    </div>
-
-    <div class="card">
-      <h2>Qué puedo cocinar</h2>
-      <div class="seg seg3" id="cMomento">
-        <button type="button" data-v="desayuno" aria-pressed="false">Desayuno</button>
-        <button type="button" data-v="almuerzo" aria-pressed="false">Almuerzo</button>
-        <button type="button" data-v="comida" aria-pressed="false">Comida</button>
-      </div>
-      <div id="cRecetas" style="margin-top:10px"><div class="empty">Agregue alimentos a la despensa para ver recetas.</div></div>
-      <div class="small muted" id="cRecMsg" role="status"></div>
+      <div class="small muted" id="cFueraMsg" role="status" style="margin-top:6px">Vale solo para esta semana, hasta el domingo. El lunes vuelve a «Ninguno» para que elija de nuevo.</div>
     </div>
 
     <div class="card">
@@ -201,22 +193,19 @@
         <label>Nombre <input id="aliNombre" list="cCatalogo" maxlength="40" placeholder="Ej.: Huevos, Arroz, Sal" required></label>
         <datalist id="cCatalogo"></datalist>
         <div class="seg" id="aliTipo">
-          <button type="button" data-v="contable" aria-pressed="true">Lo cuento por unidades</button>
+          <button type="button" data-v="contable" aria-pressed="true">Cantidad exacta</button>
           <button type="button" data-v="nivel" aria-pressed="false">Poco, medio o lleno</button>
         </div>
-        <div id="aliContable" class="stack">
-          <div class="row2">
-            <label>Cuánto tengo <input id="aliCant" inputmode="decimal" placeholder="Ej.: 8"></label>
-            <label>Unidad <input id="aliUnidad" maxlength="14" placeholder="unidades, libras…"></label>
-          </div>
-          <div class="row2">
-            <label>Avisarme con menos de <input id="aliMin" inputmode="decimal" placeholder="Ej.: 4"></label>
-            <label>Precio c/u (opcional) <input id="aliPrecio" inputmode="numeric" placeholder="$ 0"></label>
-          </div>
+        <div class="row2">
+          <label>Cuánto tengo <input id="aliCant" inputmode="decimal" placeholder="Ej.: 8"></label>
+          <label>Unidad <select id="aliUnidad"></select></label>
         </div>
-        <div id="aliNivelBox" hidden>
-          <label>Cómo está <select id="aliNivel"><option value="3">Lleno</option><option value="2">Medio</option><option value="1">Poco</option><option value="0">Se acabó</option></select></label>
+        <div class="row2">
+          <label id="aliMinL">Avisarme con menos de <input id="aliMin" inputmode="decimal" placeholder="Ej.: 4"></label>
+          <label id="aliNivelL" hidden>El que está en uso está <select id="aliNivel"><option value="3">Lleno</option><option value="2">Medio</option><option value="1">Poco</option></select></label>
+          <label>Precio c/u (opcional) <input id="aliPrecio" inputmode="numeric" placeholder="$ 0"></label>
         </div>
+        <p class="small muted" id="aliAyuda" hidden>Cuente todas las que tiene, incluida la que está en uso. Ejemplo: dos bolsas de arroz, una llena y otra por la mitad: escriba 2 y elija Medio. Le avisa cuando solo le quede una y esté en Poco.</p>
         <details>
           <summary>Más opciones</summary>
           <div class="campos">
@@ -233,24 +222,19 @@
         <div class="small muted" id="aliMsg" role="status"></div>
       </form>
     </div>
+  </section>
 
+  <!-- ===================== MIS COMIDAS: RECETAS ===================== -->
+  <section class="tab" id="tab-recetas" hidden>
     <div class="card">
-      <h2>Registrar una compra</h2>
-      <p class="small muted" style="margin-bottom:8px">Suma a la despensa y, si escribe cuánto pagó, lo anota también como gasto de mercado.</p>
-      <form id="fCompra" autocomplete="off">
-        <label>Qué compró <select id="coItem"></select></label>
-        <div class="row2">
-          <label>Cuánto <input id="coCant" inputmode="decimal" placeholder="Ej.: 12"></label>
-          <label>Cuánto pagó en total <input id="coValor" inputmode="numeric" placeholder="$ 0"></label>
-        </div>
-        <button class="primary" id="coBtn" type="submit">Registrar compra</button>
-        <div class="small muted" id="coMsg" role="status"></div>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Lista de compras</h2>
-      <div id="cCompras"><div class="empty">No le falta nada por ahora.</div></div>
+      <h2>Qué puedo cocinar</h2>
+      <div class="seg seg3" id="cMomento">
+        <button type="button" data-v="desayuno" aria-pressed="false">Desayuno</button>
+        <button type="button" data-v="almuerzo" aria-pressed="false">Almuerzo</button>
+        <button type="button" data-v="comida" aria-pressed="false">Comida</button>
+      </div>
+      <div id="cRecetas" style="margin-top:10px"><div class="empty">Agregue alimentos a la despensa para ver recetas.</div></div>
+      <div class="small muted" id="cRecMsg" role="status"></div>
     </div>
 
     <div class="card">
@@ -259,6 +243,28 @@
       <button class="primary" id="cCopiar" type="button" style="width:100%">Copiar despensa y presupuesto</button>
       <div class="small muted" id="cCopMsg" role="status" style="margin-top:6px"></div>
       <textarea id="cCopTxt" hidden readonly></textarea>
+    </div>
+  </section>
+
+  <!-- ===================== MIS COMIDAS: COMPRAS ===================== -->
+  <section class="tab" id="tab-compras" hidden>
+    <div class="card">
+      <h2>Lista de compras</h2>
+      <div id="cCompras"><div class="empty">No le falta nada por ahora.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Registrar una compra</h2>
+      <p class="small muted" style="margin-bottom:8px">Suma a la despensa y, si escribe cuánto pagó, lo anota también como gasto de mercado.</p>
+      <form id="fCompra" autocomplete="off">
+        <label>Qué compró <select id="coItem"></select></label>
+        <div class="row2">
+          <label id="coCantL">Cuánto <input id="coCant" inputmode="decimal" placeholder="Ej.: 12"></label>
+          <label>Cuánto pagó en total <input id="coValor" inputmode="numeric" placeholder="$ 0"></label>
+        </div>
+        <button class="primary" id="coBtn" type="submit">Registrar compra</button>
+        <div class="small muted" id="coMsg" role="status"></div>
+      </form>
     </div>
   </section>
 
@@ -367,13 +373,17 @@
   </section>
 </div>
 
-<nav class="tabs" role="tablist">
+<nav class="tabs" id="navQuincenas" role="tablist" aria-label="Mis Quincenas">
   <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
   <button role="tab" data-tab="pagos" aria-selected="false">Pagos<span class="badge" id="badge" hidden></span></button>
   <button role="tab" data-tab="ingresos" aria-selected="false">Ingresos</button>
-  <button role="tab" data-tab="comida" aria-selected="false">Comida</button>
   <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
   <button role="tab" data-tab="mas" aria-selected="false">Más</button>
+</nav>
+<nav class="tabs" id="navComidas" role="tablist" aria-label="Mis comidas" hidden>
+  <button role="tab" data-tab="despensa" aria-selected="false">Despensa<span class="badge" id="badgeDespensa" hidden></span></button>
+  <button role="tab" data-tab="recetas" aria-selected="false">Recetas</button>
+  <button role="tab" data-tab="compras" aria-selected="false">Compras</button>
 </nav>
 
 <script src="js/motor.js"></script>

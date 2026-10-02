@@ -8,13 +8,13 @@ No usa frameworks ni herramientas de compilación: es HTML, CSS y JavaScript pur
 
 | Archivo | Qué hace |
 |---|---|
-| `index.html` | La página: las seis pestañas (Hoy, Pagos, Ingresos, Comida, Plan, Más). |
+| `index.html` | La página, con sus dos secciones: Mis Quincenas (pestañas Hoy, Pagos, Ingresos, Plan, Más) y Mis comidas (Despensa, Recetas, Compras). |
 | `css/estilos.css` | Colores, tamaños y distribución. Tiene tema claro y oscuro. |
 | `js/motor.js` | Los cálculos: quincenas, plan de deudas, reparto de ingresos, pagos y el generador del Excel. No toca la pantalla. |
 | `js/almacen.js` | Guarda y lee los datos en el teléfono (IndexedDB). |
 | `js/app.js` | La interfaz: dibuja las pantallas y responde a los botones. |
 | `js/despensa.js` | Los cálculos de la despensa: catálogo de alimentos, recetario, estimado de comidas y lista de compras. No toca la pantalla. |
-| `js/comida.js` | La pantalla de la pestaña Comida. |
+| `js/comida.js` | Las pantallas de la sección Mis comidas. |
 | `js/nube.js` | Sincronización con Firebase: inicio de sesión y copia de los cambios entre dispositivos. |
 | `js/firebase-config.js` | Identificadores del proyecto de Firebase. No son secretos. |
 | `sw.js` | *Service worker*: guarda los archivos para que la app abra sin internet. |
@@ -117,12 +117,14 @@ GitHub Pages se actualiza solo en uno o dos minutos. En cada dispositivo, al abr
 
 En la pestaña **Pagos**, "Crear recordatorios" genera un archivo `.ics` con los pagos pendientes de los próximos seis meses y los días en que hay que guardar plata, a la hora que se elija (por defecto, 6 de la tarde). En el iPhone, envíese el archivo por correo, ábralo en la app Mail y toque **Agregar todo**. Cada evento tiene un identificador fijo, así que al importarlo de nuevo se actualiza en lugar de duplicarse.
 
-## Despensa (pestaña Comida)
+## Mis comidas
 
-Lleva el inventario de la cocina en unidades simples (huevos por unidad, arroz por libras, atún por latas) y, para lo que no se cuenta, en niveles: lleno, medio, poco, se acabó.
+Arriba, junto al título, se elige la sección: **Mis Quincenas** o **Mis comidas**. Cada una tiene su propia barra de pestañas abajo. Mis comidas tiene tres: Despensa, Recetas y Compras.
 
-- **Avisos**: cada alimento tiene un mínimo. Cuando queda menos, aparece un aviso en la pestaña Comida y en Hoy.
-- **Estimado de comidas**: cada comida completa necesita una porción de base (arroz, pasta, pan) y una de proteína. El valor "comidas que rinde cada unidad" de cada alimento se puede cambiar en "Más opciones". Es una aproximación. Los días se calculan con 3 comidas diarias menos los almuerzos por semana que se hacen fuera de casa (se elige en la misma pestaña).
+Lleva el inventario de la cocina en unidades simples (huevos por unidad, arroz por libras, atún por latas); la unidad se elige de una lista. Lo que no se cuenta exacto se lleva por nivel: cuántas hay y si la que está en uso está llena, por la mitad o con poco. Dos bolsas de arroz, una llena y otra por la mitad, cuentan como 1,5 bolsas.
+
+- **Avisos**: cada alimento tiene un mínimo. Cuando queda menos, aparece un aviso en Despensa y en Hoy.
+- **Estimado de comidas**: cada comida completa necesita una porción de base (arroz, pasta, pan) y una de proteína. El valor "comidas que rinde cada unidad" de cada alimento se puede cambiar en "Más opciones". Es una aproximación. Los almuerzos fuera de casa se eligen semana por semana en la misma pestaña: lo que queda de la semana en curso se calcula con menos comidas en casa y, de la semana siguiente en adelante, con 3 comidas diarias. El lunes la elección vuelve a "Ninguno".
 - **Qué puedo cocinar**: recetas del recetario (en `js/despensa.js`, lista `RECETAS`) que salen con lo que hay, y las que quedan a uno o dos ingredientes. "La preparé" descuenta los ingredientes.
 - **Registrar una compra**: suma a la despensa, guarda el precio por unidad y anota el gasto en la categoría Mercado.
 - **Lista de compras**: lo que está por debajo del mínimo, con el costo estimado y si cabe en lo que queda de la quincena.

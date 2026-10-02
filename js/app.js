@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.1";
+var VERSION_APP = "3.4";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -318,8 +318,22 @@ document.addEventListener("click", function (e) {
   var t = e.target.closest(".tabs button"); if (t) irA(t.dataset.tab);
 });
 $("alertaPagos").addEventListener("click", function () { irA("pagos"); });
-function irA(tab) { ["hoy", "pagos", "ingresos", "comida", "plan", "mas"].forEach(function (n) { $("tab-" + n).hidden = (n !== tab);
-  document.querySelector('.tabs button[data-tab="' + n + '"]').setAttribute("aria-selected", String(n === tab)); }); window.scrollTo(0, 0); }
+/* La app tiene dos secciones que se eligen arriba: "Mis Quincenas" (la plata) y "Mis comidas" (la despensa).
+   Cada una tiene sus propias pestañas en la barra de abajo. */
+var SECCIONES = { quincenas: ["hoy", "pagos", "ingresos", "plan", "mas"], comidas: ["despensa", "recetas", "compras"] };
+var ultimaPestana = { quincenas: "hoy", comidas: "despensa" };
+function irA(tab) {
+  var modo = SECCIONES.comidas.indexOf(tab) >= 0 ? "comidas" : "quincenas"; ultimaPestana[modo] = tab;
+  SECCIONES.quincenas.concat(SECCIONES.comidas).forEach(function (n) { $("tab-" + n).hidden = (n !== tab);
+    document.querySelector('.tabs button[data-tab="' + n + '"]').setAttribute("aria-selected", String(n === tab)); });
+  $("navQuincenas").hidden = (modo !== "quincenas"); $("navComidas").hidden = (modo !== "comidas");
+  Array.prototype.forEach.call($("apps").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.modo === modo)); });
+  try { localStorage.setItem("mq-seccion", modo); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+$("apps").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) irA(ultimaPestana[b.dataset.modo]); });
+// Al abrir, vuelve a la sección que estaba usando.
+try { if (localStorage.getItem("mq-seccion") === "comidas") irA("despensa"); } catch (e) {}
 function cambiarQ(q) { S.q = q; renderHoy(); }
 $("qPrev").addEventListener("click", function () { cambiarQ(anteriorQ(S.q)); });
 $("qNext").addEventListener("click", function () { cambiarQ(siguientePago(S.q)); });
@@ -346,7 +360,7 @@ $("exportar").addEventListener("click", function () {
   (S.P.fijosExtra || []).forEach(function (x) { datos.push(["Otro gasto fijo: " + x.nombre + " (día " + x.dia + ", desde " + x.desde + ")", x.valor, "$"]); });
   datos.push(["Exportado el", hoyISO(), ""]);
   var filasDespensa = S.despensa.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre); }).map(function (it) {
-    return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "Poco" : Despensa.cant(it.minimo) + " " + (it.unidad || ""), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
+    return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "La última en poco" : Despensa.cant(it.minimo) + " " + (it.unidad || ""), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
   var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos, despensa: filasDespensa });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
 });

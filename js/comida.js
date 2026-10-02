@@ -1,15 +1,22 @@
-/* Pestaña "Comida": la pantalla de la despensa.
+/* Sección "Mis comidas" (pestañas Despensa, Recetas y Compras).
    Los cálculos están en despensa.js (objeto Despensa). Aquí solo se dibuja y se responde a los botones.
    Usa lo que app.js comparte en window.MQ.app (estado, guardar, borrar, crear un gasto…). */
 (function () {
 "use strict";
 var A = window.MQ.app, $ = A.$, esc = A.esc, money = A.money, S = A.S;
-// Comidas que salen de la despensa: 21 a la semana (3 diarias) menos los almuerzos que hace fuera de casa.
-function almuerzosFuera() { var v = S.P ? parseInt(S.P.almuerzos_fuera, 10) : 0; return isNaN(v) ? 0 : Math.max(0, Math.min(7, v)); }
-function comidasPorDia() { return (21 - almuerzosFuera()) / 7; }
-function textoRitmo() { var f = almuerzosFuera(); return f === 0 ? "a 3 comidas diarias en casa" : (f === 7 ? "sin contar el almuerzo, que hace fuera de casa" : "contando " + f + (f === 1 ? " almuerzo" : " almuerzos") + " por semana fuera de casa"); }
+/* Almuerzos fuera de casa: se elige para la semana en curso (lunes a domingo), porque unas semanas almuerza fuera y otras no.
+   Se guarda con los datos del presupuesto como { semana: lunes de esa semana, dias: N }; al cambiar de semana deja de valer. */
+function fechaLocal(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function diaSemana() { return (fechaLocal(A.hoyISO()).getDay() + 6) % 7; } // lunes = 0 … domingo = 6
+function lunes() { var d = fechaLocal(A.hoyISO()); d.setDate(d.getDate() - diaSemana());
+  return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function ajusteSemana() { var x = S.P && S.P.almuerzos_semana; return x && typeof x === "object" ? x : null; }
+function almuerzosFuera() { var x = ajusteSemana(); if (!x || x.semana !== lunes()) return 0; var v = parseInt(x.dias, 10); return isNaN(v) ? 0 : Math.max(0, Math.min(7, v)); }
+function semanaSinElegir() { var x = ajusteSemana(); return !x || x.semana !== lunes(); }
+function diasQueDura(comidas) { return Despensa.diasQueDura(comidas, almuerzosFuera(), 7 - diaSemana()); }
+function textoRitmo() { var f = almuerzosFuera(); return f === 0 ? "a 3 comidas diarias en casa" : (f === 7 ? "sin contar los almuerzos de esta semana, que hace fuera de casa" : "contando " + f + (f === 1 ? " almuerzo" : " almuerzos") + " fuera de casa esta semana"); }
 var h = new Date().getHours(), momento = h < 10 ? "desayuno" : (h < 15 ? "almuerzo" : "comida");
-var editando = null, tipo = "contable";
+var editando = null, tipo = "contable", avisoGuardado = false, ultimoSugerido = "";
 
 function dec(v) { var x = parseFloat(String(v).replace(",", ".")); return isNaN(x) || x < 0 ? 0 : Math.round(x * 100) / 100; }
 function saldoQuincena() { var e = A.estadoQ(A.quincenaDe(A.hoyISO())); return e ? e.saldo : null; }
@@ -17,20 +24,22 @@ function porNombre(a, b) { return a.nombre.localeCompare(b.nombre); }
 
 /* ---------- dibujar ---------- */
 function render() {
-  var items = S.despensa || [], r = Despensa.resumen(items, comidasPorDia()), saldo = saldoQuincena();
+  var items = S.despensa || [], r = Despensa.resumen(items, 3), saldo = saldoQuincena();
   if (document.activeElement !== $("cFuera")) $("cFuera").value = String(almuerzosFuera());
   $("cFuera").disabled = !S.P;
+  if (!avisoGuardado) $("cFueraMsg").textContent = (ajusteSemana() && semanaSinElegir() ? "Empezó una semana nueva: elija si esta semana almuerza fuera. " : "") + "Vale solo para esta semana, hasta el domingo. El lunes vuelve a «Ninguno» para que elija de nuevo.";
   // resumen
   if (!items.length) { $("cBig").textContent = "–"; $("cSub").textContent = "Agregue sus alimentos para ver el estimado."; }
   else {
     $("cBig").textContent = r.comidas + (r.comidas === 1 ? " comida" : " comidas");
     var falta = r.limita === "proteina" ? " Le limita la proteína." : (r.limita === "base" ? " Le limita la base (arroz, pasta, pan)." : "");
-    $("cSub").textContent = "Unos " + Despensa.cant(r.dias) + " día(s), " + textoRitmo() + "." + falta + (saldo != null ? " Le quedan " + money(saldo) + " de la quincena." : "");
+    $("cSub").textContent = "Unos " + Despensa.cant(diasQueDura(r.comidas)) + " día(s), " + textoRitmo() + "." + falta + (saldo != null ? " Le quedan " + money(saldo) + " de la quincena." : "");
   }
   // avisos de lo que se está acabando (aquí y en la pestaña Hoy)
   var txt = r.alertas.length ? "Recuerde que se le está acabando: " + r.alertas.map(function (a) { return a.nombre.toLowerCase(); }).join(", ") + "." : "";
   $("cAlertas").hidden = !txt; $("cAlertas").textContent = txt;
   $("notaDespensa").hidden = !txt; $("notaDespensa").textContent = txt + " Ver despensa ›";
+  $("badgeDespensa").hidden = !r.alertas.length; $("badgeDespensa").textContent = r.alertas.length;
   // recetas
   Array.prototype.forEach.call($("cMomento").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === momento)); });
   var R = $("cRecetas");
@@ -45,6 +54,9 @@ function render() {
       var costo = 0, sin = false; a.faltan.forEach(function (f) { if (f.precio) costo += f.precio * Math.max(1, Math.ceil(f.necesita - f.tiene)); else sin = true; });
       var precio = sin ? "" : " Comprarlo cuesta unos " + money(costo) + (saldo != null ? (costo <= saldo ? ", y le alcanza." : ", y no le alcanza con lo que queda de la quincena.") : ".");
       return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>Le falta: ' + esc(a.faltan.map(function (f) { return f.nombre.toLowerCase(); }).join(" y ")) + '.' + esc(precio) + '</p></div>'; }).join("");
+    var sin = Despensa.sinReceta(items);
+    if (sin.length) html += '<p class="small muted" style="margin-top:10px">El recetario de la app no tiene recetas con: ' + esc(sin.map(function (i) { return i.nombre.toLowerCase(); }).join(", ")) +
+      '. Para recetas con eso, use «Copiar despensa y presupuesto», más abajo, y pregúntele a Claude.</p>';
     R.innerHTML = html;
   }
   // lista de la despensa: primero lo que se está acabando
@@ -53,9 +65,9 @@ function render() {
   else L.innerHTML = items.slice().sort(function (a, b) { return (Despensa.enAlerta(b) - Despensa.enAlerta(a)) || porNombre(a, b); }).map(function (it) {
     return '<div class="item' + (Despensa.enAlerta(it) ? ' alerta' : '') + '"><div class="tx"><b>' + esc(it.nombre) + '</b><span>' +
       (Despensa.enAlerta(it) ? 'Se está acabando · ' : '') + (it.precio ? money(it.precio) + ' c/u · ' : '') + '<button class="del" type="button" data-editar="' + esc(it.id) + '">Editar</button></span></div>' +
-      '<button class="mini" type="button" data-menos="' + esc(it.id) + '" aria-label="Quitar uno de ' + esc(it.nombre) + '">−</button>' +
-      '<span class="qty num">' + esc(Despensa.textoCantidad(it)) + '</span>' +
-      '<button class="mini" type="button" data-mas="' + esc(it.id) + '" aria-label="Sumar uno a ' + esc(it.nombre) + '">+</button></div>'; }).join("");
+      '<button class="mini" type="button" data-menos="' + esc(it.id) + '" aria-label="Menos ' + esc(it.nombre) + '">−</button>' +
+      '<span class="qty num">' + esc(Despensa.textoUnidades(it)) + (Despensa.textoNivel(it) ? '<small>' + esc(Despensa.textoNivel(it)) + '</small>' : '') + '</span>' +
+      '<button class="mini" type="button" data-mas="' + esc(it.id) + '" aria-label="Más ' + esc(it.nombre) + '">+</button></div>'; }).join("");
   // selector de compra
   var sel = $("coItem"), ops = items.slice().sort(porNombre).map(function (it) { return it.id + "|" + it.nombre; }).join("\n");
   if (sel.dataset.ops !== ops) { var prev = sel.value; sel.innerHTML = items.slice().sort(porNombre).map(function (it) { return '<option value="' + esc(it.id) + '">' + esc(it.nombre) + '</option>'; }).join(""); sel.dataset.ops = ops; if (prev) sel.value = prev; }
@@ -65,8 +77,10 @@ function render() {
   else {
     var pie = '<div class="kv tot"><span>Costo estimado</span><span class="num">' + money(lc.total) + '</span></div>';
     if (lc.sinPrecio) pie += '<p class="small muted">' + lc.sinPrecio + ' producto(s) no tienen precio registrado y no están en la suma. El precio se guarda al registrar una compra.</p>';
-    if (saldo != null) pie += '<div class="note ' + (lc.total <= saldo ? "ok" : "bad") + '" style="margin-top:8px">' + (lc.total <= saldo ?
-      "Le alcanza: le quedan " + money(saldo) + " de la quincena y después de esta compra quedaría en " + money(saldo - lc.total) + "." :
+    // Solo se dice si alcanza cuando hay al menos un precio; si no, la suma en $0 engañaría.
+    if (saldo != null && lc.sinPrecio === lc.lista.length) pie += '<p class="small muted" style="margin-top:6px">Le quedan ' + money(saldo) + ' de la quincena. Cuando estos productos tengan precio, aquí verá si le alcanza.</p>';
+    else if (saldo != null) pie += '<div class="note ' + (lc.total <= saldo ? "ok" : "bad") + '" style="margin-top:8px">' + (lc.total <= saldo ?
+      (lc.sinPrecio ? "Para lo que tiene precio le alcanza" : "Le alcanza") + ": le quedan " + money(saldo) + " de la quincena y después de esta compra quedaría en " + money(saldo - lc.total) + "." :
       "No le alcanza: le quedan " + money(saldo) + " de la quincena. Priorice lo más necesario.") + '</div>';
     C.innerHTML = lc.lista.map(function (c) { return '<div class="kv"><span>' + esc(c.nombre) + ' · ' + Despensa.cant(c.comprar) + ' ' + esc(Despensa.unidadTxt(c.unidad, c.comprar)) + '</span><span class="num">' + (c.sinPrecio ? "sin precio" : money(c.costo)) + '</span></div>'; }).join("") + pie;
   }
@@ -79,37 +93,51 @@ function buscar(id) { return (S.despensa || []).filter(function (x) { return x.i
 function ajustar(id, paso) {
   var it = buscar(id); if (!it) return;
   var c = Object.assign({}, it);
-  c.cantidad = it.tipo === "nivel" ? Math.max(0, Math.min(3, Math.round(it.cantidad) + paso)) : Math.max(0, Math.round((it.cantidad + paso) * 100) / 100);
+  if (it.tipo === "nivel") { var nv = Despensa.ajustarNivel(it, paso); c.cantidad = nv.cantidad; c.nivel = nv.nivel; }
+  else c.cantidad = Math.max(0, Math.round((it.cantidad + paso) * 100) / 100);
   guardarAlimento(c).then(A.render).catch(function () {});
 }
 
 /* ---------- formulario de alimento ---------- */
 function mostrarTipo(t) { tipo = t; Array.prototype.forEach.call($("aliTipo").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === t)); });
-  $("aliContable").hidden = (t === "nivel"); $("aliNivelBox").hidden = (t !== "nivel"); }
-function limpiarForm() { editando = null; $("fAli").reset(); mostrarTipo("contable"); $("cFormT").textContent = "Agregar un alimento"; $("aliBtn").textContent = "Guardar alimento";
+  var nv = (t === "nivel"); $("aliMinL").hidden = nv; $("aliNivelL").hidden = !nv; $("aliAyuda").hidden = !nv; $("aliCant").placeholder = nv ? "Ej.: 2" : "Ej.: 8"; }
+// La unidad se elige de una lista. Si un alimento guardado trae otra, se agrega a la lista para no perderla.
+function ponerUnidad(u) { var sel = $("aliUnidad"); u = u || "unidades";
+  if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
+  sel.value = u; }
+$("aliUnidad").innerHTML = Despensa.UNIDADES.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
+function limpiarForm() { editando = null; ultimoSugerido = ""; $("fAli").reset(); mostrarTipo("contable"); $("cFormT").textContent = "Agregar un alimento"; $("aliBtn").textContent = "Guardar alimento";
   $("aliCancelar").hidden = true; $("aliQuitar").hidden = true; $("aliQuitar").classList.remove("sure"); $("aliQuitar").textContent = "Quitar de la despensa"; }
 function cargarForm(it) { editando = it.id; $("aliNombre").value = it.nombre; mostrarTipo(it.tipo || "contable");
-  $("aliCant").value = Despensa.cant(it.cantidad); $("aliUnidad").value = it.unidad || ""; $("aliMin").value = Despensa.cant(it.minimo); $("aliPrecio").value = it.precio ? money(it.precio) : "";
-  $("aliNivel").value = String(Math.round(it.cantidad)); $("aliRol").value = it.rol || "otro"; $("aliRinde").value = it.rinde ? Despensa.cant(it.rinde) : "";
+  var p = it.tipo === "nivel" ? Despensa.partes(it) : null;
+  $("aliCant").value = p ? String(p.unidades) : Despensa.cant(it.cantidad); ponerUnidad(it.unidad); $("aliMin").value = Despensa.cant(it.minimo); $("aliPrecio").value = it.precio ? money(it.precio) : "";
+  $("aliNivel").value = String(p && p.nivel ? p.nivel : 3); $("aliRol").value = it.rol || "otro"; $("aliRinde").value = it.rinde ? Despensa.cant(it.rinde) : "";
   $("cFormT").textContent = "Editar " + it.nombre; $("aliBtn").textContent = "Guardar cambios"; $("aliCancelar").hidden = false; $("aliQuitar").hidden = false;
   $("fAli").scrollIntoView({ block: "center" }); }
 A.segmento("aliTipo", mostrarTipo);
 A.fmtInput($("aliPrecio")); A.fmtInput($("coValor"));
 $("cCatalogo").innerHTML = Despensa.catalogo().map(function (c) { return '<option value="' + esc(c.nombre) + '">'; }).join("");
 // Al escribir un alimento conocido se llenan solos la unidad, el mínimo y cuánto rinde.
-$("aliNombre").addEventListener("change", function () { var s = Despensa.sugerido(this.value); if (!s || editando) return;
-  mostrarTipo(s.tipo); $("aliUnidad").value = s.unidad; $("aliMin").value = Despensa.cant(s.minimo); $("aliRol").value = s.rol; $("aliRinde").value = s.rinde ? Despensa.cant(s.rinde) : ""; });
+// Solo una vez por alimento, para no pisar lo que usted cambie después (por ejemplo la unidad).
+$("aliNombre").addEventListener("change", function () { var k = Despensa.clave(this.value); if (k === ultimoSugerido) return; ultimoSugerido = k;
+  var s = Despensa.sugerido(this.value); if (!s || editando) return;
+  mostrarTipo(s.tipo); ponerUnidad(s.unidad); $("aliMin").value = Despensa.cant(s.minimo); $("aliRol").value = s.rol; $("aliRinde").value = s.rinde ? Despensa.cant(s.rinde) : ""; });
 $("fAli").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("aliMsg"), nombre = $("aliNombre").value.trim(); if (!nombre) return;
   var clave = Despensa.clave(nombre), previo = editando ? buscar(editando) : null;
   if (!previo && (S.despensa || []).some(function (x) { return (x.clave || Despensa.clave(x.nombre)) === clave; })) { msg.textContent = "Ese alimento ya está en la despensa. Use Editar o los botones + y −."; return; }
   var it = { id: previo ? previo.id : A.nuevoId(), nombre: nombre, clave: clave, tipo: tipo, rol: $("aliRol").value, rinde: dec($("aliRinde").value),
-    cantidad: tipo === "nivel" ? parseInt($("aliNivel").value, 10) : dec($("aliCant").value), unidad: tipo === "nivel" ? "" : ($("aliUnidad").value.trim() || "unidades"),
-    minimo: tipo === "nivel" ? 1 : dec($("aliMin").value), precio: tipo === "nivel" ? (previo ? previo.precio || 0 : 0) : A.num($("aliPrecio").value) };
+    unidad: $("aliUnidad").value || "unidades", precio: A.num($("aliPrecio").value) };
+  if (tipo === "nivel") { // cuántas hay (si no escribe nada, una) y cómo está la que está en uso
+    it.cantidad = $("aliCant").value.trim() === "" ? 1 : Math.round(dec($("aliCant").value)); it.nivel = it.cantidad > 0 ? parseInt($("aliNivel").value, 10) : 0; it.minimo = 0;
+  } else { it.cantidad = dec($("aliCant").value); it.minimo = dec($("aliMin").value); }
   var btn = $("aliBtn"); btn.disabled = true;
   guardarAlimento(it).then(function () { limpiarForm(); msg.textContent = "Guardado: " + nombre + "."; A.render(); })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
 });
 $("aliCancelar").addEventListener("click", limpiarForm);
+// Si cambia la unidad de un alimento conocido (por ejemplo arroz de libras a kilos), se ajusta cuánto rinde.
+$("aliUnidad").addEventListener("change", function () { var s = Despensa.sugerido($("aliNombre").value); if (!s || editando || !s.rinde) return;
+  $("aliRinde").value = Despensa.cant(s.rinde * (s.unidad === "libras" && this.value === "kilos" ? 2 : 1)); });
 $("aliQuitar").addEventListener("click", function () { var b = this, id = editando; if (!id) return;
   if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "¿Seguro? Quitar"; return; }
   A.eliminar("despensa", id).then(function () { S.despensa = S.despensa.filter(function (x) { return x.id !== id; }); limpiarForm(); A.render(); }).catch(function () {});
@@ -117,11 +145,15 @@ $("aliQuitar").addEventListener("click", function () { var b = this, id = editan
 
 /* ---------- compra: suma a la despensa y anota el gasto ---------- */
 $("fCompra").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("coMsg"), it = buscar($("coItem").value);
-  if (!it) { msg.textContent = "Primero agregue el alimento a la despensa."; return; }
+  if (!it) { msg.textContent = "Primero agregue el alimento en la pestaña Despensa."; return; }
   var cantidad = dec($("coCant").value), valor = A.num($("coValor").value);
   if (it.tipo !== "nivel" && !cantidad) { msg.textContent = "Escriba cuánto compró."; return; }
   var c = Object.assign({}, it);
-  if (it.tipo === "nivel") c.cantidad = 3; else { c.cantidad = Math.round((it.cantidad + cantidad) * 100) / 100; if (valor) c.precio = Math.round(valor / cantidad); }
+  if (it.tipo === "nivel") { // las unidades nuevas llegan llenas; la que estaba en uso sigue como estaba
+    cantidad = Math.max(1, Math.round(cantidad)); var p = Despensa.partes(it);
+    c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel;
+  } else c.cantidad = Math.round((it.cantidad + cantidad) * 100) / 100;
+  if (valor) c.precio = Math.round(valor / cantidad);
   var btn = $("coBtn"); btn.disabled = true;
   guardarAlimento(c).then(function () { return valor ? A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor }) : null; })
     .then(function () { $("coCant").value = ""; $("coValor").value = ""; msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + (valor ? " y se anotó un gasto de " + money(valor) + "." : "."); A.render(); })
@@ -142,17 +174,19 @@ document.addEventListener("click", function (e) {
 });
 A.segmento("cMomento", function (v) { momento = v; render(); });
 // Cuántos días almuerza fuera: se guarda con los datos del presupuesto para que también se sincronice.
-$("cFuera").addEventListener("change", function () { if (!S.P) return; var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_fuera = parseInt(this.value, 10) || 0;
-  A.guardarDatos(P).then(function () { msg.textContent = "Guardado. El estimado de días ya lo tiene en cuenta."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
-$("notaDespensa").addEventListener("click", function () { A.irA("comida"); });
+$("cFuera").addEventListener("change", function () { if (!S.P) return; var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_semana = { semana: lunes(), dias: parseInt(this.value, 10) || 0 }; delete P.almuerzos_fuera;
+  avisoGuardado = true;
+  A.guardarDatos(P).then(function () { msg.textContent = "Guardado para esta semana. El estimado de días ya lo tiene en cuenta."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
+$("notaDespensa").addEventListener("click", function () { A.irA("despensa"); });
 
 /* ---------- texto para preguntarle a Claude ---------- */
 function lineasDespensa() {
   var items = (S.despensa || []).slice().sort(porNombre); if (!items.length) return [];
-  var r = Despensa.resumen(items, comidasPorDia()), L = ["", "MI DESPENSA (lo que tengo en la cocina)"];
+  var r = Despensa.resumen(items, 3), L = ["", "MI DESPENSA (lo que tengo en la cocina)"];
   items.forEach(function (it) { L.push("- " + it.nombre + ": " + Despensa.textoCantidad(it) + (Despensa.enAlerta(it) ? " (se está acabando)" : "") + (it.precio ? ", precio aproximado " + money(it.precio) + " c/u" : "")); });
-  L.push("Estimado de la app: me alcanza para unas " + r.comidas + " comidas completas, cerca de " + Despensa.cant(r.dias) + " día(s).");
-  if (almuerzosFuera()) L.push("Almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s) a la semana") + ", así que esos almuerzos no salen de la despensa.");
+  L.push("Estimado de la app: me alcanza para unas " + r.comidas + " comidas completas, cerca de " + Despensa.cant(diasQueDura(r.comidas)) + " día(s).");
+  L.push(almuerzosFuera() ? "Esta semana almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s)") + ", así que esos almuerzos no salen de la despensa. Hay semanas en que almuerzo fuera y otras en que no."
+    : "Esta semana almuerzo en casa todos los días.");
   return L;
 }
 window.MQ.resumenExtra = lineasDespensa;

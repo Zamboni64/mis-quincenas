@@ -114,3 +114,12 @@ input::-webkit-date-and-time-value{text-align:left;margin:0}
 .receta p{font-size:13px;color:var(--muted);margin:2px 0 6px}
 .receta .ghost{padding:8px 12px;width:auto;font-size:13px}
 .subt{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:12px 0 2px}
+.item .qty small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+/* Selector de sección en el encabezado: Mis Quincenas / Mis comidas */
+.apps{display:flex;align-items:baseline;gap:14px;min-width:0;flex-wrap:wrap}
+.apps button{border:0;background:transparent;padding:4px 0;margin:0;font-family:var(--display);font-size:17px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:-.01em;white-space:nowrap}
+.apps button[aria-pressed="true"]{color:var(--ink);font-weight:700}
+.apps button[aria-pressed="true"]::after{content:" \2713";color:var(--accent);font-weight:700}
+#hoyTxt{white-space:nowrap;flex:none}
+#navComidas .badge{top:0;right:0}
+@media (max-width:359px){.apps{gap:10px}.apps button{font-size:16px}#hoyTxt{display:none}}
