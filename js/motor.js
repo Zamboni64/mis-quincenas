@@ -214,6 +214,24 @@ function zip(archivos){
   var total=0;partes.forEach(function(p){total+=p.length});var out=new Uint8Array(total),pos=0;
   partes.forEach(function(p){out.set(p,pos);pos+=p.length});return out}
 
-return {calcular:calcular,quincenaDe:quincenaDe,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro};
+/* Archivo de calendario (.ics) con un evento por cada pago pendiente y por cada día de pago en que hay que guardar plata.
+   Cada evento tiene un identificador fijo (UID): si se vuelve a importar, el calendario lo actualiza en vez de duplicarlo. */
+function construirCalendario(d){
+  function t(s){return String(s).replace(/\\/g,"\\\\").replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n")}
+  function f(iso){return iso.replace(/-/g,"")}
+  function dinero(v){return "$"+Math.round(v).toLocaleString("es-CO")}
+  var sello=d.ahora.replace(/[-:]/g,"").slice(0,15)+"Z",L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mis Quincenas//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Mis Quincenas"],n=0;
+  function evento(uid,fecha,titulo,nota,diasAntes){
+    L.push("BEGIN:VEVENT","UID:"+uid+"@mis-quincenas","DTSTAMP:"+sello,"DTSTART:"+f(fecha)+"T090000","DTEND:"+f(fecha)+"T091500","SUMMARY:"+t(titulo),"DESCRIPTION:"+t(nota));
+    if(diasAntes>0)L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+t(titulo),"TRIGGER:-P"+diasAntes+"D","END:VALARM");
+    L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+t(titulo),"TRIGGER:PT0M","END:VALARM","END:VEVENT");n++}
+  d.pagos.forEach(function(p){if(d.hechos[p.id]||p.fecha<d.desde||p.fecha>d.hasta)return;
+    evento("pago-"+p.id,p.fecha,"Pagar "+p.nombre+": "+dinero(p.valor),"Vence hoy. Al pagarlo, márquelo en la app Mis Quincenas.",p.aviso||3)});
+  d.quincenas.forEach(function(q){if(q.fecha<d.desde||q.fecha>d.hasta||!(q.aparta>0))return;
+    evento("guardar-"+q.fecha,q.fecha,"Día de pago: guardar "+dinero(q.aparta)+" para la otra quincena","Sepárelo hoy mismo. Ya está descontado de lo libre en la app.",0)});
+  L.push("END:VCALENDAR");
+  return {texto:L.join("\r\n")+"\r\n",eventos:n}}
+
+return {calcular:calcular,quincenaDe:quincenaDe,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro,construirCalendario:construirCalendario};
 })();
 if(typeof module!=="undefined")module.exports=Motor;

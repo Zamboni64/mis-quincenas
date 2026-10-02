@@ -109,6 +109,12 @@
     <div class="card"><h2 id="pgMesT">Este mes</h2><div class="list" id="pgMes"></div></div>
     <div class="card"><h2 id="pgSigT">Mes siguiente</h2><div class="list" id="pgSig"></div></div>
     <p class="small muted">Las libranzas, los seguros, YouTube e iCloud no aparecen porque se debitan solos.</p>
+    <div class="card">
+      <h2>Recordatorios en el calendario</h2>
+      <p class="small muted" style="margin-bottom:10px">Crea un archivo con los pagos pendientes de los próximos seis meses y los días en que debe guardar plata. Al abrirlo, el Calendario del teléfono le ofrece agregarlos y le avisa unos días antes y el día del pago, aunque no abra la app.</p>
+      <button class="primary" id="crearCal" type="button" style="width:100%">Crear recordatorios</button>
+      <div class="small muted" id="calMsg" role="status" style="margin-top:6px"></div>
+    </div>
   </section>
 
   <!-- ===================== INGRESOS ===================== -->
@@ -117,6 +123,14 @@
       <h2>Plata que me deben</h2>
       <div class="list" id="meDeben"><div class="empty">Cargando…</div></div>
       <p class="small muted" style="margin-top:8px">No cuenta en el presupuesto hasta que anote el pago aquí abajo.</p>
+      <form id="fDebe" autocomplete="off" style="margin-top:10px">
+        <div class="row2">
+          <label>Quién o qué <input id="mNombre" maxlength="40" placeholder="Ej.: Carlos, préstamo"></label>
+          <label>Cuánto me debe <input id="mValor" inputmode="numeric" placeholder="$ 0"></label>
+        </div>
+        <button class="ghost" id="mBtn" type="submit">Agregar a la lista</button>
+        <div class="small muted" id="mMsg" role="status"></div>
+      </form>
     </div>
 
     <div class="card">

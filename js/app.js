@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "2.2";
+var VERSION_APP = "2.3";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -135,7 +135,7 @@ function renderIngresos() {
   if (!P) { $("meDeben").innerHTML = '<div class="empty">Aún no hay datos.</div>'; return; }
   var rec = {}; S.ingresos.forEach(function (x) { var o = origenDe(x); rec[o] = (rec[o] || 0) + (x.valor || 0); });
   $("meDeben").innerHTML = (P.meDeben || []).map(function (m) { var r = rec[m.nombre] || 0, falta = Math.max(0, m.valor - r);
-    return '<div class="item"><div class="tx"><b>' + esc(m.nombre) + '</b><span>Recibido ' + money(r) + ' de ' + money(m.valor) + '</span></div><span class="pill ' + (falta ? "plain" : "ok") + '">' + (falta ? "Falta " + money(falta) : "Pagada") + '</span></div>'; }).join("") || '<div class="empty">Nadie le debe plata.</div>';
+    return '<div class="item"><div class="tx"><b>' + esc(m.nombre) + '</b><span>Recibido ' + money(r) + ' de ' + money(m.valor) + '</span></div><span class="pill ' + (falta ? "plain" : "ok") + '">' + (falta ? "Falta " + money(falta) : "Pagada") + '</span><button class="del" data-debe="' + esc(m.nombre) + '">Quitar</button></div>'; }).join("") || '<div class="empty">Nadie le debe plata.</div>';
   $("listaIng").innerHTML = S.ingresos.length ? S.ingresos.slice().sort(function (a, b) { return (b.fecha + (b.creado || "")).localeCompare(a.fecha + (a.creado || "")); }).map(function (x) {
     var txt; if (x.destino === "deudas") { var a = (R && R.porId[x.id]) || { colchon: 0, primo: 0, apple: 0, abono: 0 };
       txt = [["Colchón", a.colchon], ["Primo", a.primo], ["Apple", a.apple], ["Abono a capital", a.abono]].filter(function (p) { return p[1] > 0; }).map(function (p) { return p[0] + " " + money(p[1]); }).join(" · "); }
@@ -217,7 +217,7 @@ function guardarDatos(P) { return guardar("config", { id: "datos", valores: P })
 
 /* ---------- acciones ---------- */
 function fmtInput(el) { el.addEventListener("input", function () { var n = num(el.value); el.value = n ? money(n) : ""; }); }
-["gValor", "iValor", "aLibre", "fValor"].forEach(function (id) { fmtInput($(id)); });
+["gValor", "iValor", "aLibre", "fValor", "mValor"].forEach(function (id) { fmtInput($(id)); });
 $("fDesde").value = hoyISO().slice(0, 7);
 $("camposDatos").addEventListener("change", function (e) { var el = e.target; if (el.dataset && el.dataset.t === "$") el.value = money(num(el.value)); });
 $("gCat").innerHTML = CATS.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("");
@@ -227,6 +227,16 @@ function segmento(id, fn) { $(id).addEventListener("click", function (e) { var b
   Array.prototype.forEach.call(this.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); }); fn(b.dataset.v); }); }
 segmento("gMedio", function (v) { medio = v; });
 segmento("iDestino", function (v) { destino = v; ayudaDestino(); });
+$("fDebe").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("mMsg");
+  if (!S.P) { msg.textContent = "Primero cargue sus datos."; return; }
+  var nombre = $("mNombre").value.trim(), valor = num($("mValor").value);
+  if (!nombre || !valor) { msg.textContent = "Escriba quién le debe y cuánto."; return; }
+  var nuevo = JSON.parse(JSON.stringify(S.P)), btn = $("mBtn"); nuevo.meDeben = nuevo.meDeben || [];
+  if (nuevo.meDeben.some(function (m) { return m.nombre.toLowerCase() === nombre.toLowerCase(); })) { msg.textContent = "Ya hay alguien con ese nombre en la lista."; return; }
+  nuevo.meDeben.push({ nombre: nombre, valor: valor }); btn.disabled = true;
+  guardarDatos(nuevo).then(function () { $("mNombre").value = ""; $("mValor").value = ""; msg.textContent = "Agregado: " + nombre + ", " + money(valor) + "."; })
+    .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
+});
 var modoFijo = "auto";
 segmento("fModo", function (v) { modoFijo = v; });
 $("fFijo").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("fMsg");
@@ -283,6 +293,11 @@ document.addEventListener("click", function (e) {
     var col = d.dataset.col, id = d.dataset.id;
     eliminar(col, id).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
     return; }
+  var md = e.target.closest(".del[data-debe]");
+  if (md) {
+    if (!md.classList.contains("sure")) { md.classList.add("sure"); md.textContent = "¿Seguro? Quitar"; setTimeout(function () { md.classList.remove("sure"); md.textContent = "Quitar"; }, 3500); return; }
+    var sinEse = JSON.parse(JSON.stringify(S.P)); sinEse.meDeben = (sinEse.meDeben || []).filter(function (m) { return m.nombre !== md.dataset.debe; });
+    guardarDatos(sinEse).catch(function () {}); return; }
   var q = e.target.closest(".del[data-fijo]");
   if (q) {
     if (!q.classList.contains("sure")) { q.classList.add("sure"); q.textContent = "¿Seguro? Quitar"; setTimeout(function () { q.classList.remove("sure"); q.textContent = "Quitar"; }, 3500); return; }
@@ -325,6 +340,16 @@ $("exportar").addEventListener("click", function () {
   datos.push(["Exportado el", hoyISO(), ""]);
   var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
+});
+
+/* ---------- recordatorios en el calendario ---------- */
+$("crearCal").addEventListener("click", function () {
+  var msg = $("calMsg"); if (!S.calc) { msg.textContent = "Aún no hay datos para crear recordatorios."; return; }
+  var hoy = hoyISO(), d = parse(hoy), hasta = iso(new Date(d.getFullYear(), d.getMonth() + 6, d.getDate()));
+  var cal = Motor.construirCalendario({ pagos: S.calc.pagos, quincenas: S.calc.quincenas, hechos: S.hechos, desde: hoy, hasta: hasta, ahora: new Date().toISOString() });
+  if (!cal.eventos) { msg.textContent = "No hay pagos pendientes en los próximos seis meses."; return; }
+  entregar("recordatorios-mis-quincenas.ics", "text/calendar", cal.texto).then(function (r) {
+    msg.textContent = (r === "compartido" ? "Listo. Elija Calendario para agregar los " : "Se descargó el archivo con ") + cal.eventos + " recordatorios" + (r === "compartido" ? "." : ". Ábralo para agregarlos al calendario."); }, errEntrega(msg));
 });
 
 /* ---------- respaldo ---------- */
