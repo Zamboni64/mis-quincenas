@@ -29,6 +29,7 @@
       <p class="small muted" style="margin-bottom:10px">La app todavía está vacía en este teléfono. Cargue el archivo de respaldo con sus datos, o empiece en cero y llénelos en la pestaña "Más".</p>
       <div class="stack">
         <button class="primary" id="bvRestaurar" type="button">Cargar un respaldo</button>
+        <button class="ghost" id="bvSesion" type="button">Iniciar sesión para traer mis datos</button>
         <button class="ghost" id="bvCero" type="button">Empezar en cero</button>
       </div>
       <div class="small muted" id="bvMsg" role="status" style="margin-top:6px"></div>
@@ -57,6 +58,7 @@
 
     <button class="note bad" id="alertaPagos" hidden></button>
     <div class="note warn" id="notaAparta" hidden></div>
+    <button class="note plain" id="notaRespaldo" type="button" hidden></button>
 
     <div class="card">
       <h2>Anotar un gasto</h2>
@@ -165,8 +167,29 @@
     </div>
 
     <div class="card">
+      <h2>Sincronización entre dispositivos</h2>
+      <p class="small muted" id="syncEstado" style="margin-bottom:10px">Cargando la sincronización…</p>
+      <div id="syncFuera">
+        <form id="fSync" autocomplete="on">
+          <label>Correo <input id="sCorreo" type="email" autocomplete="username" inputmode="email" required></label>
+          <label>Contraseña <input id="sClave" type="password" autocomplete="current-password" minlength="6" required></label>
+          <button class="primary" type="submit">Iniciar sesión</button>
+        </form>
+        <div class="stack" style="margin-top:8px">
+          <button class="ghost" id="sCrear" type="button">Crear cuenta con este correo y contraseña</button>
+          <button class="del" id="sOlvido" type="button">Olvidé mi contraseña</button>
+        </div>
+      </div>
+      <div id="syncDentro" class="stack" hidden>
+        <button class="primary" id="sAhora" type="button">Sincronizar ahora</button>
+        <button class="ghost" id="sSalir" type="button">Cerrar sesión</button>
+      </div>
+      <div class="small muted" id="syncMsg" role="status" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card">
       <h2>Respaldo</h2>
-      <p class="small muted" style="margin-bottom:10px">Sus datos viven solo en este teléfono. Guarde un respaldo cada cierto tiempo: es la única forma de recuperarlos si cambia de celular o se borran los datos del navegador.</p>
+      <p class="small muted" style="margin-bottom:10px">Un archivo con todos sus datos, que queda en sus manos. Guárdelo cada quincena: lo protege de un borrado por error, que con la sincronización se copiaría a todos sus dispositivos.</p>
       <div class="stack">
         <button class="primary" id="guardarResp" type="button">Guardar respaldo</button>
         <button class="ghost" id="restaurarResp" type="button">Restaurar un respaldo</button>
@@ -198,6 +221,7 @@
       <h2>Otros gastos fijos</h2>
       <p class="small muted" style="margin-bottom:8px">Para un gasto mensual nuevo, como una suscripción. Se descuenta de lo libre de la quincena que corresponda desde el mes que indique.</p>
       <div class="list" id="listaFijos"><div class="empty">No ha agregado gastos fijos.</div></div>
+      <div id="impactoFijos" hidden></div>
       <form id="fFijo" autocomplete="off" style="margin-top:10px">
         <label>Nombre <input id="fNombre" maxlength="40" placeholder="Ej.: Claude Pro" required></label>
         <div class="row2">
@@ -240,5 +264,7 @@
 <script src="js/motor.js"></script>
 <script src="js/almacen.js"></script>
 <script src="js/app.js"></script>
+<script src="js/firebase-config.js"></script>
+<script type="module" src="js/nube.js"></script>
 </body>
 </html>

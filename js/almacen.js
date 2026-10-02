@@ -60,5 +60,5 @@ var Almacen = (function () {
     return Promise.resolve(false);
   }
 
-  return { abrir: abrir, cargarTodo: cargarTodo, poner: poner, borrar: borrar, reemplazarTodo: reemplazarTodo, nuevoId: nuevoId, pedirPersistencia: pedirPersistencia };
+  return { abrir: abrir, cargarTodo: cargarTodo, todos: todos, poner: poner, borrar: borrar, reemplazarTodo: reemplazarTodo, nuevoId: nuevoId, pedirPersistencia: pedirPersistencia };
 })();

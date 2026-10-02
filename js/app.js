@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "1.2";
+var VERSION_APP = "2.0";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -54,6 +54,8 @@ function renderHoy() {
   $("aLab").firstChild.textContent = "Libre del pago del " + corto(q) + " ";
   if (document.activeElement !== $("aLibre")) $("aLibre").value = S.ajustes[q] != null ? money(S.ajustes[q]) : "";
   $("bienvenida").hidden = !(S.lista && !S.P);
+  var dsr = diasSinRespaldo(), nr = $("notaRespaldo"); nr.hidden = !(S.P && (dsr === null || dsr >= 15));
+  nr.textContent = dsr === null ? "Aún no ha guardado un respaldo de sus datos. Guardar respaldo ›" : "Hace " + dsr + " días que no guarda un respaldo. Guardar respaldo ›";
   var hero = $("hero");
   if (!S.lista) { $("heroBig").textContent = "…"; $("heroSub").textContent = "Cargando sus datos"; return; }
   if (!e) {
@@ -192,20 +194,26 @@ function renderFijos() {
     return '<div class="item"><div class="tx"><b>' + esc(x.nombre) + '</b><span>Día ' + esc(x.dia) + ' · desde ' + esc(mesLargo(x.desde)) + ' · ' + (x.automatico ? "se debita solo" : "lo paga usted") + '</span></div>' +
       '<div class="amt num">' + money(x.valor) + '</div><button class="del" data-fijo="' + esc(x.id) + '">Quitar</button></div>'; }).join("") : '<div class="empty">No ha agregado gastos fijos.</div>';
 }
-function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); }
+function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); renderSync(); }
 
 /* ---------- cargar y guardar ---------- */
 function aplicar(todo) { // pasa lo leído del almacén a la memoria
   var cfg = (todo.config || []).filter(function (x) { return x.id === "datos"; })[0];
-  S.P = cfg ? cfg.valores : null;
-  S.gastos = todo.gastos || [];
-  S.ingresos = (todo.ingresos || []).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
-  S.hechos = {}; (todo.pagosHechos || []).forEach(function (x) { S.hechos[x.id] = true; });
-  S.ajustes = {}; (todo.ajustes || []).forEach(function (x) { if (typeof x.libre === "number") S.ajustes[x.id] = x.libre; });
+  S.P = cfg && cfg.valores ? cfg.valores : null;
+  S.gastos = (todo.gastos || []).filter(vivo);
+  S.ingresos = (todo.ingresos || []).filter(vivo).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
+  S.hechos = {}; (todo.pagosHechos || []).filter(vivo).forEach(function (x) { S.hechos[x.id] = true; });
+  S.ajustes = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) { if (typeof x.libre === "number") S.ajustes[x.id] = x.libre; });
   S.lista = true; recalcular(); render();
 }
+/* Todo cambio pasa por estas dos funciones: le ponen fecha de modificación (`mod`), lo guardan en el dispositivo y lo envían a la nube si hay sesión.
+   Borrar no elimina el registro: lo marca como borrado, para que el borrado también llegue a los demás dispositivos. */
+function ahora() { return new Date().toISOString(); }
+function guardar(tienda, obj) { obj.mod = ahora(); return Almacen.poner(tienda, obj).then(function () { if (window.Nube) Nube.subir(tienda, obj); }); }
+function eliminar(tienda, id) { return guardar(tienda, { id: id, borrado: true }); }
+function vivo(x) { return x && !x.borrado; }
 function fallo(el) { el.textContent = "No se pudo guardar en este dispositivo. Revise que tenga espacio libre e intente de nuevo."; }
-function guardarDatos(P) { return Almacen.poner("config", { id: "datos", valores: P }).then(function () { S.P = P; recalcular(); render(); }); }
+function guardarDatos(P) { return guardar("config", { id: "datos", valores: P }).then(function () { S.P = P; recalcular(); render(); }); }
 
 /* ---------- acciones ---------- */
 function fmtInput(el) { el.addEventListener("input", function () { var n = num(el.value); el.value = n ? money(n) : ""; }); }
@@ -240,7 +248,7 @@ $("fGasto").addEventListener("submit", function (e) { e.preventDefault();
   var v = num($("gValor").value), f = $("gFecha").value; if (!v || !f) return;
   var btn = $("gBtn"), msg = $("gMsg"), g = { id: Almacen.nuevoId(), fecha: f, quincena: quincenaDe(f), categoria: $("gCat").value, descripcion: $("gDesc").value.trim(), valor: v, medio: medio, creado: new Date().toISOString() };
   btn.disabled = true;
-  Almacen.poner("gastos", g).then(function () { S.gastos.push(g); $("gValor").value = ""; $("gDesc").value = "";
+  guardar("gastos", g).then(function () { S.gastos.push(g); $("gValor").value = ""; $("gDesc").value = "";
     msg.textContent = "Guardado: " + money(v) + (g.quincena !== S.q ? " (quedó en el pago del " + corto(g.quincena) + ")" : ""); renderHoy(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
 });
@@ -248,12 +256,12 @@ $("fIng").addEventListener("submit", function (e) { e.preventDefault();
   var v = num($("iValor").value), f = $("iFecha").value; if (!v || !f) return;
   var btn = $("iBtn"), msg = $("iMsg"), x = { id: Almacen.nuevoId(), fecha: f, quincena: quincenaDe(f), origen: $("iOrigen").value, destino: destino, valor: v, creado: new Date().toISOString() };
   btn.disabled = true;
-  Almacen.poner("ingresos", x).then(function () { S.ingresos.push(x); $("iValor").value = ""; msg.textContent = "Guardado: " + money(v) + "."; recalcular(); render(); })
+  guardar("ingresos", x).then(function () { S.ingresos.push(x); $("iValor").value = ""; msg.textContent = "Guardado: " + money(v) + "."; recalcular(); render(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
 });
 $("fAj").addEventListener("submit", function (e) { e.preventDefault();
   var txt = $("aLibre").value.trim(), btn = $("aBtn"), msg = $("aMsg"), q = S.q; btn.disabled = true;
-  (txt === "" ? Almacen.borrar("ajustes", q) : Almacen.poner("ajustes", { id: q, libre: num(txt) }))
+  (txt === "" ? eliminar("ajustes", q) : guardar("ajustes", { id: q, libre: num(txt) }))
     .then(function () { if (txt === "") delete S.ajustes[q]; else S.ajustes[q] = num(txt);
       msg.textContent = txt === "" ? "Listo: esta quincena vuelve al cálculo normal." : "Listo: lo libre de esta quincena quedó en " + money(num(txt)) + "."; renderHoy(); renderPlan(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
@@ -273,7 +281,7 @@ document.addEventListener("click", function (e) {
   if (d) { // borrar pide confirmación en el mismo botón
     if (!d.classList.contains("sure")) { d.classList.add("sure"); d.textContent = "¿Seguro? Borrar"; setTimeout(function () { d.classList.remove("sure"); d.textContent = "Borrar"; }, 3500); return; }
     var col = d.dataset.col, id = d.dataset.id;
-    Almacen.borrar(col, id).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
+    eliminar(col, id).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
     return; }
   var q = e.target.closest(".del[data-fijo]");
   if (q) {
@@ -282,7 +290,7 @@ document.addEventListener("click", function (e) {
     guardarDatos(copia).catch(function () {}); return; }
   var c = e.target.closest(".check");
   if (c) { var pid = c.dataset.pago; c.disabled = true;
-    (S.hechos[pid] ? Almacen.borrar("pagosHechos", pid) : Almacen.poner("pagosHechos", { id: pid, fecha: hoyISO() }))
+    (S.hechos[pid] ? eliminar("pagosHechos", pid) : guardar("pagosHechos", { id: pid, fecha: hoyISO() }))
       .then(function () { if (S.hechos[pid]) delete S.hechos[pid]; else S.hechos[pid] = true; renderPagos(); }).catch(function () { c.disabled = false; });
     return; }
   var t = e.target.closest(".tabs button"); if (t) irA(t.dataset.tab);
@@ -323,7 +331,8 @@ $("exportar").addEventListener("click", function () {
 function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes }; }
 $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
   if (!S.P) { msg.textContent = "Aún no hay datos para respaldar."; return; }
-  entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1)).then(msgEntrega(msg, "el respaldo"), errEntrega(msg));
+  entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1))
+    .then(function (r) { marcarRespaldo(); msgEntrega(msg, "el respaldo")(r); renderHoy(); }, errEntrega(msg));
 });
 function leerRespaldo(texto) { // valida el archivo y lo convierte al formato del almacén
   var r = JSON.parse(texto);
@@ -346,11 +355,53 @@ $("restaurarResp").addEventListener("click", function () {
 $("bvRestaurar").addEventListener("click", function () { pedirArchivo($("bvMsg")); });
 $("archivoResp").addEventListener("change", function () {
   var f = this.files && this.files[0], msg = avisoResp; if (!f) return;
-  f.text().then(function (t) { var todo = leerRespaldo(t); return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo);
+  f.text().then(function (t) { var todo = leerRespaldo(t), m = ahora();
+    // Cada registro del respaldo queda como el más reciente; lo que hay hoy y no viene en el respaldo se marca como borrado,
+    // para que la nube y los demás dispositivos queden igual que el respaldo.
+    ["config", "gastos", "ingresos", "pagosHechos", "ajustes"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
+    var enResp = function (k) { var o = {}; todo[k].forEach(function (x) { o[x.id] = true; }); return o; };
+    var g = enResp("gastos"), i = enResp("ingresos"), p = enResp("pagosHechos"), a = enResp("ajustes");
+    S.gastos.forEach(function (x) { if (!g[x.id]) todo.gastos.push({ id: x.id, borrado: true, mod: m }); });
+    S.ingresos.forEach(function (x) { if (!i[x.id]) todo.ingresos.push({ id: x.id, borrado: true, mod: m }); });
+    Object.keys(S.hechos).forEach(function (id) { if (!p[id]) todo.pagosHechos.push({ id: id, borrado: true, mod: m }); });
+    Object.keys(S.ajustes).forEach(function (id) { if (!a[id]) todo.ajustes.push({ id: id, borrado: true, mod: m }); });
+    return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo); marcarRespaldo(); if (window.Nube) Nube.sincronizar();
+      todo.gastos = todo.gastos.filter(vivo); todo.ingresos = todo.ingresos.filter(vivo);
     msg.textContent = "Respaldo cargado: " + todo.gastos.length + " gasto(s) y " + todo.ingresos.length + " ingreso(s)."; }); })
     .catch(function () { msg.textContent = "Ese archivo no es un respaldo de Mis Quincenas o está dañado. No se cambió nada."; });
 });
 $("bvCero").addEventListener("click", function () { guardarDatos(JSON.parse(JSON.stringify(DATOS_EN_CERO))).then(function () { irA("mas"); }).catch(function () { fallo($("bvMsg")); }); });
+
+/* ---------- recordatorio de respaldo ---------- */
+function marcarRespaldo() { try { localStorage.setItem("mq-ultimo-respaldo", hoyISO()); } catch (e) {} }
+function diasSinRespaldo() { var u = null; try { u = localStorage.getItem("mq-ultimo-respaldo"); } catch (e) {} return u ? dias(u, hoyISO()) : null; }
+$("notaRespaldo").addEventListener("click", function () { irA("mas"); });
+
+/* ---------- sincronización: pantalla ---------- */
+function renderSync(e) {
+  e = e || (window.Nube ? Nube.estado() : { disponible: false, usuario: null });
+  $("syncFuera").hidden = !!e.usuario; $("syncDentro").hidden = !e.usuario;
+  var t;
+  if (e.usuario) t = "Sesión iniciada como " + e.usuario + ". " + (e.sincronizando ? "Sincronizando…" : (e.error || (e.ultima ? "Última sincronización: " + new Date(e.ultima).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false }) + "." : "")));
+  else t = e.disponible ? "Sin sesión: los datos están solo en este dispositivo." : (e.error || "Cargando la sincronización…");
+  $("syncEstado").textContent = t;
+}
+function accionSync(fn, okTxt) { var msg = $("syncMsg"); msg.textContent = "";
+  if (!window.Nube) { msg.textContent = "La sincronización no está disponible en este momento."; return; }
+  var correo = $("sCorreo").value.trim(), clave = $("sClave").value;
+  Promise.resolve().then(function () { return fn(correo, clave); }).then(function () { msg.textContent = okTxt || ""; $("sClave").value = ""; }, function (err) { msg.textContent = (err && err.message) || "No se pudo completar."; });
+}
+$("fSync").addEventListener("submit", function (e) { e.preventDefault(); accionSync(function (c, k) { return Nube.entrar(c, k); }); });
+$("sCrear").addEventListener("click", function () { accionSync(function (c, k) { return Nube.crear(c, k); }, "Cuenta creada."); });
+$("sOlvido").addEventListener("click", function () { accionSync(function (c) { if (!c) throw new Error("Escriba su correo arriba y vuelva a tocar aquí."); return Nube.recuperar(c); }, "Le enviamos un correo para cambiar la contraseña."); });
+$("sAhora").addEventListener("click", function () { if (window.Nube) Nube.sincronizar(); });
+$("sSalir").addEventListener("click", function () { if (window.Nube) Nube.salir(); });
+$("bvSesion").addEventListener("click", function () { irA("mas"); $("sCorreo").focus(); });
+// Ganchos que usa nube.js: cuando llegan cambios de otro dispositivo se vuelve a leer todo del almacén.
+window.MQ = {
+  alEstadoNube: function (e) { renderSync(e); },
+  alCambiarNube: function () { Almacen.cargarTodo().then(aplicar).catch(function () {}); }
+};
 
 /* ---------- resumen para preguntarle a Claude ---------- */
 function armarResumen() {
