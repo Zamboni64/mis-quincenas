@@ -4,7 +4,10 @@
 (function () {
 "use strict";
 var A = window.MQ.app, $ = A.$, esc = A.esc, money = A.money, S = A.S;
-var COMIDAS_POR_DIA = 3;
+// Comidas que salen de la despensa: 21 a la semana (3 diarias) menos los almuerzos que hace fuera de casa.
+function almuerzosFuera() { var v = S.P ? parseInt(S.P.almuerzos_fuera, 10) : 0; return isNaN(v) ? 0 : Math.max(0, Math.min(7, v)); }
+function comidasPorDia() { return (21 - almuerzosFuera()) / 7; }
+function textoRitmo() { var f = almuerzosFuera(); return f === 0 ? "a 3 comidas diarias en casa" : (f === 7 ? "sin contar el almuerzo, que hace fuera de casa" : "contando " + f + (f === 1 ? " almuerzo" : " almuerzos") + " por semana fuera de casa"); }
 var h = new Date().getHours(), momento = h < 10 ? "desayuno" : (h < 15 ? "almuerzo" : "comida");
 var editando = null, tipo = "contable";
 
@@ -14,13 +17,15 @@ function porNombre(a, b) { return a.nombre.localeCompare(b.nombre); }
 
 /* ---------- dibujar ---------- */
 function render() {
-  var items = S.despensa || [], r = Despensa.resumen(items, COMIDAS_POR_DIA), saldo = saldoQuincena();
+  var items = S.despensa || [], r = Despensa.resumen(items, comidasPorDia()), saldo = saldoQuincena();
+  if (document.activeElement !== $("cFuera")) $("cFuera").value = String(almuerzosFuera());
+  $("cFuera").disabled = !S.P;
   // resumen
   if (!items.length) { $("cBig").textContent = "–"; $("cSub").textContent = "Agregue sus alimentos para ver el estimado."; }
   else {
     $("cBig").textContent = r.comidas + (r.comidas === 1 ? " comida" : " comidas");
     var falta = r.limita === "proteina" ? " Le limita la proteína." : (r.limita === "base" ? " Le limita la base (arroz, pasta, pan)." : "");
-    $("cSub").textContent = "Unos " + Despensa.cant(r.dias) + " día(s) a " + COMIDAS_POR_DIA + " comidas diarias." + falta + (saldo != null ? " Le quedan " + money(saldo) + " de la quincena." : "");
+    $("cSub").textContent = "Unos " + Despensa.cant(r.dias) + " día(s), " + textoRitmo() + "." + falta + (saldo != null ? " Le quedan " + money(saldo) + " de la quincena." : "");
   }
   // avisos de lo que se está acabando (aquí y en la pestaña Hoy)
   var txt = r.alertas.length ? "Recuerde que se le está acabando: " + r.alertas.map(function (a) { return a.nombre.toLowerCase(); }).join(", ") + "." : "";
@@ -136,14 +141,18 @@ document.addEventListener("click", function (e) {
   }
 });
 A.segmento("cMomento", function (v) { momento = v; render(); });
+// Cuántos días almuerza fuera: se guarda con los datos del presupuesto para que también se sincronice.
+$("cFuera").addEventListener("change", function () { if (!S.P) return; var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_fuera = parseInt(this.value, 10) || 0;
+  A.guardarDatos(P).then(function () { msg.textContent = "Guardado. El estimado de días ya lo tiene en cuenta."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
 $("notaDespensa").addEventListener("click", function () { A.irA("comida"); });
 
 /* ---------- texto para preguntarle a Claude ---------- */
 function lineasDespensa() {
   var items = (S.despensa || []).slice().sort(porNombre); if (!items.length) return [];
-  var r = Despensa.resumen(items, COMIDAS_POR_DIA), L = ["", "MI DESPENSA (lo que tengo en la cocina)"];
+  var r = Despensa.resumen(items, comidasPorDia()), L = ["", "MI DESPENSA (lo que tengo en la cocina)"];
   items.forEach(function (it) { L.push("- " + it.nombre + ": " + Despensa.textoCantidad(it) + (Despensa.enAlerta(it) ? " (se está acabando)" : "") + (it.precio ? ", precio aproximado " + money(it.precio) + " c/u" : "")); });
   L.push("Estimado de la app: me alcanza para unas " + r.comidas + " comidas completas, cerca de " + Despensa.cant(r.dias) + " día(s).");
+  if (almuerzosFuera()) L.push("Almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s) a la semana") + ", así que esos almuerzos no salen de la despensa.");
   return L;
 }
 window.MQ.resumenExtra = lineasDespensa;

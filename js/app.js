@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.0";
+var VERSION_APP = "3.1";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -442,7 +442,7 @@ window.MQ = {
   alCambiarNube: function () { Almacen.cargarTodo().then(aplicar).catch(function () {}); },
   // Lo que otros archivos de la app pueden usar de este.
   app: { S: S, $: $, esc: esc, money: money, num: num, hoyISO: hoyISO, quincenaDe: quincenaDe, siguientePago: siguientePago, corto: corto, dias: dias,
-    estadoQ: estadoQ, guardar: guardar, eliminar: eliminar, nuevoGasto: nuevoGasto, irA: function (t) { irA(t); }, render: function () { render(); },
+    estadoQ: estadoQ, guardar: guardar, guardarDatos: guardarDatos, eliminar: eliminar, nuevoGasto: nuevoGasto, irA: function (t) { irA(t); }, render: function () { render(); },
     fmtInput: fmtInput, segmento: segmento, nuevoId: Almacen.nuevoId, registrarRender: function (f) { rendersExtra.push(f); } },
   resumenExtra: null
 };

@@ -122,7 +122,7 @@ En la pestaña **Pagos**, "Crear recordatorios" genera un archivo `.ics` con los
 Lleva el inventario de la cocina en unidades simples (huevos por unidad, arroz por libras, atún por latas) y, para lo que no se cuenta, en niveles: lleno, medio, poco, se acabó.
 
 - **Avisos**: cada alimento tiene un mínimo. Cuando queda menos, aparece un aviso en la pestaña Comida y en Hoy.
-- **Estimado de comidas**: cada comida completa necesita una porción de base (arroz, pasta, pan) y una de proteína. El valor "comidas que rinde cada unidad" de cada alimento se puede cambiar en "Más opciones". Es una aproximación.
+- **Estimado de comidas**: cada comida completa necesita una porción de base (arroz, pasta, pan) y una de proteína. El valor "comidas que rinde cada unidad" de cada alimento se puede cambiar en "Más opciones". Es una aproximación. Los días se calculan con 3 comidas diarias menos los almuerzos por semana que se hacen fuera de casa (se elige en la misma pestaña).
 - **Qué puedo cocinar**: recetas del recetario (en `js/despensa.js`, lista `RECETAS`) que salen con lo que hay, y las que quedan a uno o dos ingredientes. "La preparé" descuenta los ingredientes.
 - **Registrar una compra**: suma a la despensa, guarda el precio por unidad y anota el gasto en la categoría Mercado.
 - **Lista de compras**: lo que está por debajo del mínimo, con el costo estimado y si cabe en lo que queda de la quincena.
