@@ -65,16 +65,27 @@ function plan(P,R){
     davLast:fd?fd+"-25":"2029-12-25",occLast:fo?fo+"-25":"2029-12-25",
     totalHoy:n(P.occ_saldo)+n(P.dav_saldo)+n(P.card_saldo)+n(P.primo)}}
 
+/* Gastos fijos que el usuario agrega (P.fijosExtra). Cada uno tiene día del mes, valor y mes desde el que empieza.
+   Del 10 al 24 sale de la quincena del 10; del 25 al 9 sale de la quincena del 25. */
+function activo(x,mesPago){return (!x.desde||mesPago>=x.desde)&&(!x.hasta||mesPago<=x.hasta)}
+function extrasDe(P,dt,is10,first){
+  var y=+dt.slice(0,4),m=+dt.slice(5,7),este=ym(dt),sig=ym(mk(y,m+1,1)),out=[];
+  (P.fijosExtra||[]).forEach(function(x){var d=n(x.dia)||1,v=n(x.valor);if(!v)return;
+    if(is10){if(d>=10&&d<=24&&activo(x,este))out.push({nombre:x.nombre,valor:v})}
+    else{if(d>=25&&!first&&activo(x,este))out.push({nombre:x.nombre,valor:v});
+      if(d<=9&&activo(x,sig))out.push({nombre:x.nombre,valor:v})}});
+  return out}
+
 /* Quincenas: qué entra, qué sale, cuánto se guarda para la otra quincena y cuánto queda libre. */
 function quincenas(P,ingresos,R,PL){
   var pct=(P.pct==null?1:n(P.pct)),fechas=[FIRST],y,m;
   for(y=2026,m=10;y<=FIN_Y;){fechas.push(mk(y,m,10),mk(y,m,25));m++;if(m>12){m=1;y++}}
   var extraQ={};ingresos.forEach(function(x){if(x.destino!=="deudas"){var q=quincenaDe(x.fecha);extraQ[q]=(extraQ[q]||0)+n(x.valor)}});
-  var SAL=["arriendo","internet","datos","icloud","youtube","tarjeta","segsalud","seghogar","cadena","primo","apple","abono","colchon"];
+  var SAL=["arriendo","internet","datos","icloud","youtube","tarjeta","segsalud","seghogar","cadena","otros","primo","apple","abono","colchon"];
   var filas=fechas.map(function(dt){
     var is10=dt.slice(8)==="10",key=ym(dt),first=dt===FIRST,yr=+dt.slice(0,4),mth=+dt.slice(5,7);
     var o={fecha:dt,sueldo:0,salud:0,pension:0,casino:0,aporte:0,occ:0,dav:0,prima:0,extra:extraQ[dt]||0,reserva:0,
-      arriendo:0,internet:0,datos:0,icloud:0,youtube:0,tarjeta:0,segsalud:0,seghogar:0,cadena:0,primo:0,apple:0,abono:0,colchon:0,aparta:0};
+      arriendo:0,internet:0,datos:0,icloud:0,youtube:0,tarjeta:0,segsalud:0,seghogar:0,cadena:0,otros:0,otrosDetalle:[],primo:0,apple:0,abono:0,colchon:0,aparta:0};
     if(!first){o.sueldo=n(P.sueldo);o.salud=n(P.salud);o.pension=n(P.pension);o.casino=n(P.casino);o.aporte=n(P.aporte);
       o.occ=dt<=PL.occLast?n(P.occ):0;o.dav=dt<=PL.davLast?n(is10?P.dav10:P.dav25):0}
     o.neto=o.sueldo-o.salud-o.pension-o.casino-o.aporte-o.occ-o.dav;
@@ -82,6 +93,7 @@ function quincenas(P,ingresos,R,PL){
     if(primaCol||primaAb)o.prima=n(P.prima);
     if(is10){o.arriendo=n(P.arriendo);o.internet=n(P.internet);o.datos=n(P.datos);o.icloud=n(P.icloud)}
     else{o.youtube=n(P.youtube);if(!first){o.tarjeta=cardCuota(P,key);o.segsalud=n(P.segsalud);o.seghogar=n(P.seghogar);o.cadena=n(P.cadena)}}
+    o.otrosDetalle=extrasDe(P,dt,is10,first);o.otrosDetalle.forEach(function(x){o.otros+=x.valor});
     if(primaCol){o.primo=R.primoFalta;o.apple=R.appleFalta;o.colchon=R.colchonDic}
     if(!first&&dt<=PL.occLast){var ab=dt>PL.davLast?n(is10?P.dav10:P.dav25)*pct:0;
       if(!is10&&dt>="2027-08-25")ab+=n(P.c_ago)*pct;if(primaAb)ab+=o.prima;if(primaCol)ab+=R.abonoDic;o.abono=ab}
@@ -105,8 +117,11 @@ function pagos(P){
      ["Arriendo",n(P.dia_arriendo)||10,n(P.arriendo),3],["Internet",n(P.dia_internet)||10,n(P.internet),3],
      ["Datos del celular",n(P.dia_datos)||10,n(P.datos),3],["Cadena",n(P.dia_cadena)||25,n(P.cadena),3]]
       .forEach(function(a){out.push({id:key+"-"+slug(a[0]),nombre:a[0],fecha:mk(y,m,a[1]),valor:a[2],aviso:a[3]})});
+    (P.fijosExtra||[]).forEach(function(x){if(x.automatico||!n(x.valor)||!activo(x,key))return;
+      var dia=Math.min(n(x.dia)||1,new Date(y,m,0).getDate());
+      out.push({id:key+"-extra-"+x.id,nombre:x.nombre||"Gasto fijo",fecha:mk(y,m,dia),valor:n(x.valor),aviso:3})});
     m++;if(m>12){m=1;y++}}
-  return out}
+  return out.sort(function(a,b){return a.fecha.localeCompare(b.fecha)})}
 
 function calcular(P,ingresos){
   ingresos=ingresos||[];var R=reparto(P,ingresos),PL=plan(P,R),Q=quincenas(P,ingresos,R,PL);
@@ -138,7 +153,7 @@ function construirLibro(d){
    {nombre:"Quincenas",cols:[["Fecha de pago","fecha","f",13],["Sueldo","sueldo","$"],["Salud","salud","$"],["Pensión","pension","$"],["Casino","casino","$"],["Aporte","aporte","$"],
     ["Libranza Occidente","occ","$"],["Libranza Davivienda","dav","$"],["Neto que recibe","neto","$b"],["Prima","prima","$"],["Ingresos extra para gastar","extra","$"],
     ["Reserva que trae de la quincena anterior","reserva","$"],["Arriendo","arriendo","$"],["Internet","internet","$"],["Datos celular","datos","$"],["iCloud+","icloud","$"],
-    ["YouTube Premium","youtube","$"],["Tarjeta Davibank","tarjeta","$"],["Seguro de salud","segsalud","$"],["Seguro de hogar","seghogar","$"],["Cadena","cadena","$"],
+    ["YouTube Premium","youtube","$"],["Tarjeta Davibank","tarjeta","$"],["Seguro de salud","segsalud","$"],["Seguro de hogar","seghogar","$"],["Cadena","cadena","$"],["Otros gastos fijos","otros","$"],
     ["Pago al primo","primo","$"],["Apple a 1 cuota","apple","$"],["Abono extra a deudas","abono","$"],["Aparta para colchón","colchon","$"],
     ["Aparta para la quincena siguiente","aparta","$"],["Total que sale","totalSale","$"],["Libre para comida, transporte y demás","libre","$b",16],
     ["Gastado según su registro","gastado","$"],["Saldo que le queda","saldo","$b"]],

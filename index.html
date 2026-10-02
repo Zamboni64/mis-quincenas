@@ -195,6 +195,27 @@
     </div>
 
     <div class="card">
+      <h2>Otros gastos fijos</h2>
+      <p class="small muted" style="margin-bottom:8px">Para un gasto mensual nuevo, como una suscripción. Se descuenta de lo libre de la quincena que corresponda desde el mes que indique.</p>
+      <div class="list" id="listaFijos"><div class="empty">No ha agregado gastos fijos.</div></div>
+      <form id="fFijo" autocomplete="off" style="margin-top:10px">
+        <label>Nombre <input id="fNombre" maxlength="40" placeholder="Ej.: Claude Pro" required></label>
+        <div class="row2">
+          <label>Valor al mes <input id="fValor" inputmode="numeric" placeholder="$ 0" required></label>
+          <label>Día del mes en que se paga <input id="fDia" inputmode="numeric" placeholder="1 a 31" required></label>
+        </div>
+        <label>Empieza en <input id="fDesde" type="month" placeholder="2026-12" required></label>
+        <div class="seg" id="fModo">
+          <button type="button" data-v="auto" aria-pressed="true">Se debita solo</button>
+          <button type="button" data-v="manual" aria-pressed="false">Lo pago yo</button>
+        </div>
+        <p class="small muted">Si lo paga usted, también aparece en la pestaña Pagos con su fecha límite.</p>
+        <button class="primary" id="fBtn" type="submit">Agregar gasto fijo</button>
+        <div class="small muted" id="fMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
       <h2>Mis datos</h2>
       <p class="small muted" style="margin-bottom:6px">Con estos valores se calcula todo. Si cambia uno, las quincenas y el plan se recalculan.</p>
       <form id="fDatos">

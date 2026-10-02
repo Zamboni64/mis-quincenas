@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "1.0";
+var VERSION_APP = "1.1";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -16,7 +16,7 @@ var CAMPOS = [
   ["Día límite de cada pago", [["dia_tarjeta", "Tarjeta Davibank", "n"], ["dia_arriendo", "Arriendo", "n"], ["dia_internet", "Internet", "n"], ["dia_datos", "Datos del celular", "n"], ["dia_cadena", "Cadena", "n"]]],
   ["Punto de partida", [["saldo_hoy", "Saldo en la cuenta el 2 oct 2026"]]]
 ];
-var DATOS_EN_CERO = { dav_plazo: 12, pct: 1, redondeo: 5000, cutoff: "2026-12-10", dia_tarjeta: 7, dia_arriendo: 10, dia_internet: 10, dia_datos: 10, dia_cadena: 25, meDeben: [] };
+var DATOS_EN_CERO = { dav_plazo: 12, pct: 1, redondeo: 5000, cutoff: "2026-12-10", dia_tarjeta: 7, dia_arriendo: 10, dia_internet: 10, dia_datos: 10, dia_cadena: 25, meDeben: [], fijosExtra: [] };
 
 /* ---------- utilidades ---------- */
 var $ = function (id) { return document.getElementById(id); };
@@ -73,8 +73,10 @@ function renderHoy() {
     if (f.aparta > 0) { ap.hidden = false; ap.textContent = "De este pago guarde " + money(f.aparta) + " para la quincena siguiente. Ya está descontado de lo libre."; } else ap.hidden = true;
     var L = [["Neto que recibe", f.neto], ["Prima", f.prima], ["Ingresos extra para gastar", f.extra], ["Trae guardado de la quincena anterior", f.reserva],
       ["Arriendo", -f.arriendo], ["Internet", -f.internet], ["Datos del celular", -f.datos], ["iCloud+", -f.icloud], ["YouTube Premium", -f.youtube], ["Tarjeta Davibank", -f.tarjeta],
-      ["Seguro de salud", -f.segsalud], ["Seguro de hogar", -f.seghogar], ["Cadena", -f.cadena], ["Pago al primo", -f.primo], ["Apple a una cuota", -f.apple],
-      ["Abono extra a deudas", -f.abono], ["Para el colchón", -f.colchon], ["Guarda para la quincena siguiente", -f.aparta]];
+      ["Seguro de salud", -f.segsalud], ["Seguro de hogar", -f.seghogar], ["Cadena", -f.cadena]]
+      .concat((f.otrosDetalle || []).map(function (x) { return [x.nombre, -x.valor]; }))
+      .concat([["Pago al primo", -f.primo], ["Apple a una cuota", -f.apple],
+      ["Abono extra a deudas", -f.abono], ["Para el colchón", -f.colchon], ["Guarda para la quincena siguiente", -f.aparta]]);
     $("detalleQ").innerHTML = L.filter(function (a) { return a[1]; }).map(function (a) { return '<div class="kv"><span>' + esc(a[0]) + '</span><span class="num">' + money(a[1]) + '</span></div>'; }).join("") +
       '<div class="kv tot"><span>Libre para comida, transporte y demás</span><span class="num">' + money(f.libre) + '</span></div>' +
       (S.ajustes[q] != null ? '<p class="small muted">Usted corrigió lo libre de esta quincena a ' + money(S.ajustes[q]) + '.</p>' : '');
@@ -167,7 +169,15 @@ function renderDatos() {
   box.innerHTML = CAMPOS.map(function (g, gi) { return '<details' + (gi === 0 ? ' open' : '') + '><summary>' + esc(g[0]) + '</summary><div class="campos">' +
     g[1].map(function (c) { return '<label>' + esc(c[1]) + (c[2] === "%" ? " (%)" : "") + '<input id="d_' + c[0] + '" data-k="' + c[0] + '" data-t="' + (c[2] || "$") + '" inputmode="' + (c[2] === "%" ? "decimal" : "numeric") + '" value="' + esc(valorCampo(S.P, c)) + '"></label>'; }).join("") + '</div></details>'; }).join("");
 }
-function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); }
+/* ---------- MÁS: otros gastos fijos ---------- */
+function mesLargo(k) { return k ? Motor.mesTxt(k) : ""; }
+function renderFijos() {
+  var lista = (S.P && S.P.fijosExtra) || [];
+  $("listaFijos").innerHTML = lista.length ? lista.map(function (x) {
+    return '<div class="item"><div class="tx"><b>' + esc(x.nombre) + '</b><span>Día ' + esc(x.dia) + ' · desde ' + esc(mesLargo(x.desde)) + ' · ' + (x.automatico ? "se debita solo" : "lo paga usted") + '</span></div>' +
+      '<div class="amt num">' + money(x.valor) + '</div><button class="del" data-fijo="' + esc(x.id) + '">Quitar</button></div>'; }).join("") : '<div class="empty">No ha agregado gastos fijos.</div>';
+}
+function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); }
 
 /* ---------- cargar y guardar ---------- */
 function aplicar(todo) { // pasa lo leído del almacén a la memoria
@@ -184,7 +194,8 @@ function guardarDatos(P) { return Almacen.poner("config", { id: "datos", valores
 
 /* ---------- acciones ---------- */
 function fmtInput(el) { el.addEventListener("input", function () { var n = num(el.value); el.value = n ? money(n) : ""; }); }
-["gValor", "iValor", "aLibre"].forEach(function (id) { fmtInput($(id)); });
+["gValor", "iValor", "aLibre", "fValor"].forEach(function (id) { fmtInput($(id)); });
+$("fDesde").value = hoyISO().slice(0, 7);
 $("camposDatos").addEventListener("change", function (e) { var el = e.target; if (el.dataset && el.dataset.t === "$") el.value = money(num(el.value)); });
 $("gCat").innerHTML = CATS.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("");
 $("gFecha").value = hoyISO(); $("iFecha").value = hoyISO();
@@ -193,6 +204,21 @@ function segmento(id, fn) { $(id).addEventListener("click", function (e) { var b
   Array.prototype.forEach.call(this.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); }); fn(b.dataset.v); }); }
 segmento("gMedio", function (v) { medio = v; });
 segmento("iDestino", function (v) { destino = v; ayudaDestino(); });
+var modoFijo = "auto";
+segmento("fModo", function (v) { modoFijo = v; });
+$("fFijo").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("fMsg");
+  if (!S.P) { msg.textContent = "Primero cargue un respaldo o empiece en cero."; return; }
+  var nombre = $("fNombre").value.trim(), valor = num($("fValor").value), dia = num($("fDia").value), desde = $("fDesde").value.trim();
+  if (!nombre || !valor) { msg.textContent = "Escriba el nombre y el valor."; return; }
+  if (dia < 1 || dia > 31) { msg.textContent = "El día debe estar entre 1 y 31."; return; }
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(desde)) { msg.textContent = "Escriba el mes de inicio así: 2026-12."; return; }
+  var nuevo = JSON.parse(JSON.stringify(S.P)), btn = $("fBtn"); nuevo.fijosExtra = nuevo.fijosExtra || [];
+  nuevo.fijosExtra.push({ id: Almacen.nuevoId(), nombre: nombre, valor: valor, dia: dia, desde: desde, automatico: modoFijo === "auto" });
+  btn.disabled = true;
+  guardarDatos(nuevo).then(function () { $("fNombre").value = ""; $("fValor").value = ""; $("fDia").value = "";
+    msg.textContent = "Agregado: " + nombre + ", " + money(valor) + " al mes desde " + mesLargo(desde) + "."; })
+    .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
+});
 $("iOrigen").addEventListener("change", function () { this.dataset.tocado = "1"; });
 
 $("fGasto").addEventListener("submit", function (e) { e.preventDefault();
@@ -234,6 +260,11 @@ document.addEventListener("click", function (e) {
     var col = d.dataset.col, id = d.dataset.id;
     Almacen.borrar(col, id).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
     return; }
+  var q = e.target.closest(".del[data-fijo]");
+  if (q) {
+    if (!q.classList.contains("sure")) { q.classList.add("sure"); q.textContent = "¿Seguro? Quitar"; setTimeout(function () { q.classList.remove("sure"); q.textContent = "Quitar"; }, 3500); return; }
+    var copia = JSON.parse(JSON.stringify(S.P)); copia.fijosExtra = (copia.fijosExtra || []).filter(function (x) { return x.id !== q.dataset.fijo; });
+    guardarDatos(copia).catch(function () {}); return; }
   var c = e.target.closest(".check");
   if (c) { var pid = c.dataset.pago; c.disabled = true;
     (S.hechos[pid] ? Almacen.borrar("pagosHechos", pid) : Almacen.poner("pagosHechos", { id: pid, fecha: hoyISO() }))
@@ -267,6 +298,7 @@ function errEntrega(msg) { return function (err) { msg.textContent = (err && err
 $("exportar").addEventListener("click", function () {
   var msg = $("expMsg"); if (!S.calc) { msg.textContent = "Aún no hay datos para exportar."; return; }
   var datos = []; CAMPOS.forEach(function (g) { g[1].forEach(function (c) { datos.push([g[0] + ": " + c[1], S.P[c[0]], c[2] === "%" ? "%" : (c[2] === "n" ? "" : "$")]); }); });
+  (S.P.fijosExtra || []).forEach(function (x) { datos.push(["Otro gasto fijo: " + x.nombre + " (día " + x.dia + ", desde " + x.desde + ")", x.valor, "$"]); });
   datos.push(["Exportado el", hoyISO(), ""]);
   var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
