@@ -220,9 +220,12 @@ function construirCalendario(d){
   function t(s){return String(s).replace(/\\/g,"\\\\").replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n")}
   function f(iso){return iso.replace(/-/g,"")}
   function dinero(v){return "$"+Math.round(v).toLocaleString("es-CO")}
+  // Hora del aviso: "HH:MM" (por defecto 6 de la tarde). El evento dura 15 minutos.
+  var hm=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(d.hora||"18:00")||["","18","00"],min=(+hm[1])*60+(+hm[2]),fin=Math.min(min+15,23*60+59);
+  function hhmm(m){var h=Math.floor(m/60),x=m%60;return (h<10?"0":"")+h+(x<10?"0":"")+x+"00"}
   var sello=d.ahora.replace(/[-:]/g,"").slice(0,15)+"Z",L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mis Quincenas//ES","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Mis Quincenas"],n=0;
   function evento(uid,fecha,titulo,nota,diasAntes){
-    L.push("BEGIN:VEVENT","UID:"+uid+"@mis-quincenas","DTSTAMP:"+sello,"DTSTART:"+f(fecha)+"T090000","DTEND:"+f(fecha)+"T091500","SUMMARY:"+t(titulo),"DESCRIPTION:"+t(nota));
+    L.push("BEGIN:VEVENT","UID:"+uid+"@mis-quincenas","DTSTAMP:"+sello,"DTSTART:"+f(fecha)+"T"+hhmm(min),"DTEND:"+f(fecha)+"T"+hhmm(fin),"SUMMARY:"+t(titulo),"DESCRIPTION:"+t(nota));
     if(diasAntes>0)L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+t(titulo),"TRIGGER:-P"+diasAntes+"D","END:VALARM");
     L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+t(titulo),"TRIGGER:PT0M","END:VALARM","END:VEVENT");n++}
   d.pagos.forEach(function(p){if(d.hechos[p.id]||p.fecha<d.desde||p.fecha>d.hasta)return;

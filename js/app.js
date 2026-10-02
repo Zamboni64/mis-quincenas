@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "2.3";
+var VERSION_APP = "2.4";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -343,10 +343,13 @@ $("exportar").addEventListener("click", function () {
 });
 
 /* ---------- recordatorios en el calendario ---------- */
+try { var horaGuardada = localStorage.getItem("mq-hora-aviso"); if (/^\d\d:\d\d$/.test(horaGuardada || "")) $("calHora").value = horaGuardada; } catch (e) {}
 $("crearCal").addEventListener("click", function () {
   var msg = $("calMsg"); if (!S.calc) { msg.textContent = "Aún no hay datos para crear recordatorios."; return; }
+  var hora = /^\d\d:\d\d$/.test($("calHora").value) ? $("calHora").value : "18:00";
+  try { localStorage.setItem("mq-hora-aviso", hora); } catch (e) {}
   var hoy = hoyISO(), d = parse(hoy), hasta = iso(new Date(d.getFullYear(), d.getMonth() + 6, d.getDate()));
-  var cal = Motor.construirCalendario({ pagos: S.calc.pagos, quincenas: S.calc.quincenas, hechos: S.hechos, desde: hoy, hasta: hasta, ahora: new Date().toISOString() });
+  var cal = Motor.construirCalendario({ pagos: S.calc.pagos, quincenas: S.calc.quincenas, hechos: S.hechos, desde: hoy, hasta: hasta, ahora: new Date().toISOString(), hora: hora });
   if (!cal.eventos) { msg.textContent = "No hay pagos pendientes en los próximos seis meses."; return; }
   entregar("recordatorios-mis-quincenas.ics", "text/calendar", cal.texto).then(function (r) {
     msg.textContent = (r === "compartido" ? "Listo. Elija Calendario para agregar los " : "Se descargó el archivo con ") + cal.eventos + " recordatorios" + (r === "compartido" ? "." : ". Ábralo para agregarlos al calendario."); }, errEntrega(msg));

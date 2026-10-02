@@ -111,8 +111,11 @@ git push
 
 GitHub Pages se actualiza solo en uno o dos minutos. En cada dispositivo, al abrir la app se descargan todos los archivos nuevos en segundo plano y la app se recarga sola una vez. La versión instalada se ve abajo en la pestaña **Más**.
 
+## Recordatorios en el calendario
+
+En la pestaña **Pagos**, "Crear recordatorios" genera un archivo `.ics` con los pagos pendientes de los próximos seis meses y los días en que hay que guardar plata, a la hora que se elija (por defecto, 6 de la tarde). En el iPhone, envíese el archivo por correo, ábralo en la app Mail y toque **Agregar todo**. Cada evento tiene un identificador fijo, así que al importarlo de nuevo se actualiza en lugar de duplicarse.
+
 ## Pendiente para siguientes etapas
 
-- Recordatorios de pagos.
 - Chat integrado con Claude (hoy se usa "Copiar resumen" en la pestaña Más).
-- Editar desde la app la lista de personas que le deben plata.
+- Notificaciones propias de la app (requieren un servidor que las envíe).
