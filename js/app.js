@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "2.4";
+var VERSION_APP = "3.0";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -34,7 +34,7 @@ function anteriorQ(q) { var d = parse(q); return d.getDate() === 25 ? iso(new Da
 function esMovil() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
 
 /* ---------- estado en memoria ---------- */
-var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {} };
+var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, despensa: [] };
 function recalcular() { S.calc = S.P ? Motor.calcular(S.P, S.ingresos) : null; }
 function filaQ(q) { return S.calc ? S.calc.porFecha[q] : null; }
 function gastosDe(q) { return S.gastos.filter(function (g) { return g.quincena === q; }); }
@@ -194,13 +194,15 @@ function renderFijos() {
     return '<div class="item"><div class="tx"><b>' + esc(x.nombre) + '</b><span>Día ' + esc(x.dia) + ' · desde ' + esc(mesLargo(x.desde)) + ' · ' + (x.automatico ? "se debita solo" : "lo paga usted") + '</span></div>' +
       '<div class="amt num">' + money(x.valor) + '</div><button class="del" data-fijo="' + esc(x.id) + '">Quitar</button></div>'; }).join("") : '<div class="empty">No ha agregado gastos fijos.</div>';
 }
-function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); renderSync(); }
+var rendersExtra = []; // pantallas definidas en otros archivos (por ejemplo comida.js)
+function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); renderSync(); rendersExtra.forEach(function (f) { f(); }); }
 
 /* ---------- cargar y guardar ---------- */
 function aplicar(todo) { // pasa lo leído del almacén a la memoria
   var cfg = (todo.config || []).filter(function (x) { return x.id === "datos"; })[0];
   S.P = cfg && cfg.valores ? cfg.valores : null;
   S.gastos = (todo.gastos || []).filter(vivo);
+  S.despensa = (todo.despensa || []).filter(vivo);
   S.ingresos = (todo.ingresos || []).filter(vivo).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
   S.hechos = {}; (todo.pagosHechos || []).filter(vivo).forEach(function (x) { S.hechos[x.id] = true; });
   S.ajustes = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) { if (typeof x.libre === "number") S.ajustes[x.id] = x.libre; });
@@ -254,11 +256,16 @@ $("fFijo").addEventListener("submit", function (e) { e.preventDefault(); var msg
 });
 $("iOrigen").addEventListener("change", function () { this.dataset.tocado = "1"; });
 
+// Crea un gasto y lo guarda. Lo usan el formulario de "Hoy" y las compras de la despensa.
+function nuevoGasto(d) {
+  var g = { id: Almacen.nuevoId(), fecha: d.fecha, quincena: quincenaDe(d.fecha), categoria: d.categoria, descripcion: d.descripcion || "", valor: d.valor, medio: d.medio || "Efectivo o débito", creado: new Date().toISOString() };
+  return guardar("gastos", g).then(function () { S.gastos.push(g); return g; });
+}
 $("fGasto").addEventListener("submit", function (e) { e.preventDefault();
   var v = num($("gValor").value), f = $("gFecha").value; if (!v || !f) return;
-  var btn = $("gBtn"), msg = $("gMsg"), g = { id: Almacen.nuevoId(), fecha: f, quincena: quincenaDe(f), categoria: $("gCat").value, descripcion: $("gDesc").value.trim(), valor: v, medio: medio, creado: new Date().toISOString() };
+  var btn = $("gBtn"), msg = $("gMsg");
   btn.disabled = true;
-  guardar("gastos", g).then(function () { S.gastos.push(g); $("gValor").value = ""; $("gDesc").value = "";
+  nuevoGasto({ fecha: f, categoria: $("gCat").value, descripcion: $("gDesc").value.trim(), valor: v, medio: medio }).then(function (g) { $("gValor").value = ""; $("gDesc").value = "";
     msg.textContent = "Guardado: " + money(v) + (g.quincena !== S.q ? " (quedó en el pago del " + corto(g.quincena) + ")" : ""); renderHoy(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
 });
@@ -311,7 +318,7 @@ document.addEventListener("click", function (e) {
   var t = e.target.closest(".tabs button"); if (t) irA(t.dataset.tab);
 });
 $("alertaPagos").addEventListener("click", function () { irA("pagos"); });
-function irA(tab) { ["hoy", "pagos", "ingresos", "plan", "mas"].forEach(function (n) { $("tab-" + n).hidden = (n !== tab);
+function irA(tab) { ["hoy", "pagos", "ingresos", "comida", "plan", "mas"].forEach(function (n) { $("tab-" + n).hidden = (n !== tab);
   document.querySelector('.tabs button[data-tab="' + n + '"]').setAttribute("aria-selected", String(n === tab)); }); window.scrollTo(0, 0); }
 function cambiarQ(q) { S.q = q; renderHoy(); }
 $("qPrev").addEventListener("click", function () { cambiarQ(anteriorQ(S.q)); });
@@ -338,7 +345,9 @@ $("exportar").addEventListener("click", function () {
   var datos = []; CAMPOS.forEach(function (g) { g[1].forEach(function (c) { datos.push([g[0] + ": " + c[1], S.P[c[0]], c[2] === "%" ? "%" : (c[2] === "n" ? "" : "$")]); }); });
   (S.P.fijosExtra || []).forEach(function (x) { datos.push(["Otro gasto fijo: " + x.nombre + " (día " + x.dia + ", desde " + x.desde + ")", x.valor, "$"]); });
   datos.push(["Exportado el", hoyISO(), ""]);
-  var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos });
+  var filasDespensa = S.despensa.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre); }).map(function (it) {
+    return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "Poco" : Despensa.cant(it.minimo) + " " + (it.unidad || ""), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
+  var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos, despensa: filasDespensa });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
 });
 
@@ -356,7 +365,7 @@ $("crearCal").addEventListener("click", function () {
 });
 
 /* ---------- respaldo ---------- */
-function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes }; }
+function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, despensa: S.despensa }; }
 $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
   if (!S.P) { msg.textContent = "Aún no hay datos para respaldar."; return; }
   entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1))
@@ -370,7 +379,8 @@ function leerRespaldo(texto) { // valida el archivo y lo convierte al formato de
     gastos: (r.gastos || []).filter(function (g) { return g && g.id && g.fecha && typeof g.valor === "number"; }),
     ingresos: (r.ingresos || []).filter(function (x) { return x && x.id && x.fecha && typeof x.valor === "number"; }),
     pagosHechos: (r.pagosHechos || []).map(function (id) { return { id: String(id) }; }),
-    ajustes: Object.keys(aj).filter(function (k) { return typeof aj[k] === "number"; }).map(function (k) { return { id: k, libre: aj[k] }; }) };
+    ajustes: Object.keys(aj).filter(function (k) { return typeof aj[k] === "number"; }).map(function (k) { return { id: k, libre: aj[k] }; }),
+    despensa: (r.despensa || []).filter(function (x) { return x && x.id && x.nombre; }) };
 }
 var avisoResp = $("respMsg");
 function pedirArchivo(dondeAvisar) { avisoResp = dondeAvisar; $("archivoResp").value = ""; $("archivoResp").click(); }
@@ -386,13 +396,14 @@ $("archivoResp").addEventListener("change", function () {
   f.text().then(function (t) { var todo = leerRespaldo(t), m = ahora();
     // Cada registro del respaldo queda como el más reciente; lo que hay hoy y no viene en el respaldo se marca como borrado,
     // para que la nube y los demás dispositivos queden igual que el respaldo.
-    ["config", "gastos", "ingresos", "pagosHechos", "ajustes"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
+    ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
     var enResp = function (k) { var o = {}; todo[k].forEach(function (x) { o[x.id] = true; }); return o; };
     var g = enResp("gastos"), i = enResp("ingresos"), p = enResp("pagosHechos"), a = enResp("ajustes");
     S.gastos.forEach(function (x) { if (!g[x.id]) todo.gastos.push({ id: x.id, borrado: true, mod: m }); });
     S.ingresos.forEach(function (x) { if (!i[x.id]) todo.ingresos.push({ id: x.id, borrado: true, mod: m }); });
     Object.keys(S.hechos).forEach(function (id) { if (!p[id]) todo.pagosHechos.push({ id: id, borrado: true, mod: m }); });
     Object.keys(S.ajustes).forEach(function (id) { if (!a[id]) todo.ajustes.push({ id: id, borrado: true, mod: m }); });
+    var dsp = enResp("despensa"); S.despensa.forEach(function (x) { if (!dsp[x.id]) todo.despensa.push({ id: x.id, borrado: true, mod: m }); });
     return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo); marcarRespaldo(); if (window.Nube) Nube.sincronizar();
       todo.gastos = todo.gastos.filter(vivo); todo.ingresos = todo.ingresos.filter(vivo);
     msg.textContent = "Respaldo cargado: " + todo.gastos.length + " gasto(s) y " + todo.ingresos.length + " ingreso(s)."; }); })
@@ -428,7 +439,12 @@ $("bvSesion").addEventListener("click", function () { irA("mas"); $("sCorreo").f
 // Ganchos que usa nube.js: cuando llegan cambios de otro dispositivo se vuelve a leer todo del almacén.
 window.MQ = {
   alEstadoNube: function (e) { renderSync(e); },
-  alCambiarNube: function () { Almacen.cargarTodo().then(aplicar).catch(function () {}); }
+  alCambiarNube: function () { Almacen.cargarTodo().then(aplicar).catch(function () {}); },
+  // Lo que otros archivos de la app pueden usar de este.
+  app: { S: S, $: $, esc: esc, money: money, num: num, hoyISO: hoyISO, quincenaDe: quincenaDe, siguientePago: siguientePago, corto: corto, dias: dias,
+    estadoQ: estadoQ, guardar: guardar, eliminar: eliminar, nuevoGasto: nuevoGasto, irA: function (t) { irA(t); }, render: function () { render(); },
+    fmtInput: fmtInput, segmento: segmento, nuevoId: Almacen.nuevoId, registrarRender: function (f) { rendersExtra.push(f); } },
+  resumenExtra: null
 };
 
 /* ---------- resumen para preguntarle a Claude ---------- */
@@ -462,6 +478,7 @@ function armarResumen() {
     L.push("", "COLCHÓN Y PLATA QUE ME DEBEN", "- Meta de colchón: " + money(S.P.meta) + "; guardado con ingresos extra: " + money(R.tot.colchon));
     (S.P.meDeben || []).forEach(function (m) { var falta = Math.max(0, m.valor - (rec[m.nombre] || 0)); if (falta) L.push("- Me deben " + money(falta) + " (" + m.nombre + "); no cuento con esa plata hasta que llegue"); });
   }
+  if (window.MQ.resumenExtra) L = L.concat(window.MQ.resumenExtra());
   L.push("", "Reglas de mi plan: no usar la tarjeta de crédito para compras nuevas y mandar a deudas todo lo que se libere.", "", "MI PREGUNTA: ");
   return L.join("\n");
 }

@@ -92,7 +92,7 @@ th,td{padding:6px 8px;text-align:right;white-space:nowrap;border-top:1px solid v
 th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:2px}
-.tabs button{flex:1;max-width:110px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:10px 2px;border-radius:10px;cursor:pointer;position:relative}
+.tabs button{flex:1;min-width:0;max-width:100px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:10px 1px;border-radius:10px;cursor:pointer;position:relative}
 .tabs button[aria-selected="true"]{background:var(--soft);color:var(--accent)}
 .badge{position:absolute;top:2px;right:6px;background:var(--bad);color:#fff;border-radius:99px;font-size:11px;min-width:18px;height:18px;line-height:18px;padding:0 5px}
 @media (prefers-reduced-motion:no-preference){.bar i,.catbar i{transition:width .3s ease}}
@@ -103,3 +103,14 @@ textarea{width:100%;min-height:140px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 /* En iPhone el campo de fecha tiene un ancho mínimo propio y se salía de su columna */
 input[type="date"],input[type="month"],input[type="time"]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;min-height:46px;text-align:left}
 input::-webkit-date-and-time-value{text-align:left;margin:0}
+/* Pestaña Comida */
+.seg.seg3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mini{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:18px;line-height:1;cursor:pointer;flex:none}
+.item .qty{min-width:76px;text-align:center;font-weight:700;font-size:14px}
+.item.alerta .qty{color:var(--warn)}
+.receta{padding:10px 0;border-top:1px solid var(--line)}
+.receta:first-child{border-top:0}
+.receta b{display:block}
+.receta p{font-size:13px;color:var(--muted);margin:2px 0 6px}
+.receta .ghost{padding:8px 12px;width:auto;font-size:13px}
+.subt{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:12px 0 2px}

@@ -58,6 +58,7 @@
 
     <button class="note bad" id="alertaPagos" hidden></button>
     <div class="note warn" id="notaAparta" hidden></div>
+    <button class="note warn" id="notaDespensa" type="button" hidden></button>
     <button class="note plain" id="notaRespaldo" type="button" hidden></button>
 
     <div class="card">
@@ -160,6 +161,98 @@
     <div class="card">
       <h2>Qué pasa con la prima de diciembre</h2>
       <div id="primaDic"><div class="empty">Cargando…</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== COMIDA ===================== -->
+  <section class="tab" id="tab-comida" hidden>
+    <div class="card hero" id="cHero">
+      <div class="lab">Con lo que tiene en la cocina</div>
+      <div class="big num" id="cBig">–</div>
+      <div class="sub num" id="cSub">Agregue sus alimentos para ver el estimado.</div>
+    </div>
+    <div class="note warn" id="cAlertas" hidden></div>
+
+    <div class="card">
+      <h2>Qué puedo cocinar</h2>
+      <div class="seg seg3" id="cMomento">
+        <button type="button" data-v="desayuno" aria-pressed="false">Desayuno</button>
+        <button type="button" data-v="almuerzo" aria-pressed="false">Almuerzo</button>
+        <button type="button" data-v="comida" aria-pressed="false">Comida</button>
+      </div>
+      <div id="cRecetas" style="margin-top:10px"><div class="empty">Agregue alimentos a la despensa para ver recetas.</div></div>
+      <div class="small muted" id="cRecMsg" role="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Mi despensa</h2>
+      <div class="list" id="cLista"><div class="empty">Aún no ha agregado alimentos.</div></div>
+    </div>
+
+    <div class="card">
+      <h2 id="cFormT">Agregar un alimento</h2>
+      <form id="fAli" autocomplete="off">
+        <label>Nombre <input id="aliNombre" list="cCatalogo" maxlength="40" placeholder="Ej.: Huevos, Arroz, Sal" required></label>
+        <datalist id="cCatalogo"></datalist>
+        <div class="seg" id="aliTipo">
+          <button type="button" data-v="contable" aria-pressed="true">Lo cuento por unidades</button>
+          <button type="button" data-v="nivel" aria-pressed="false">Poco, medio o lleno</button>
+        </div>
+        <div id="aliContable" class="stack">
+          <div class="row2">
+            <label>Cuánto tengo <input id="aliCant" inputmode="decimal" placeholder="Ej.: 8"></label>
+            <label>Unidad <input id="aliUnidad" maxlength="14" placeholder="unidades, libras…"></label>
+          </div>
+          <div class="row2">
+            <label>Avisarme con menos de <input id="aliMin" inputmode="decimal" placeholder="Ej.: 4"></label>
+            <label>Precio c/u (opcional) <input id="aliPrecio" inputmode="numeric" placeholder="$ 0"></label>
+          </div>
+        </div>
+        <div id="aliNivelBox" hidden>
+          <label>Cómo está <select id="aliNivel"><option value="3">Lleno</option><option value="2">Medio</option><option value="1">Poco</option><option value="0">Se acabó</option></select></label>
+        </div>
+        <details>
+          <summary>Más opciones</summary>
+          <div class="campos">
+            <label>Tipo de alimento <select id="aliRol"><option value="base">Base (arroz, pasta, pan)</option><option value="proteina">Proteína (huevo, pollo, granos)</option><option value="acompanante">Acompañante (verduras, frutas)</option><option value="otro" selected>Otro</option></select></label>
+            <label>Comidas que rinde cada unidad <input id="aliRinde" inputmode="decimal" placeholder="Ej.: 5"></label>
+          </div>
+          <p class="small muted">Con esto se calcula para cuántas comidas le alcanza. Los alimentos conocidos ya traen un valor sugerido.</p>
+        </details>
+        <div class="stack">
+          <button class="primary" id="aliBtn" type="submit">Guardar alimento</button>
+          <button class="ghost" id="aliCancelar" type="button" hidden>Cancelar</button>
+          <button class="del" id="aliQuitar" type="button" hidden>Quitar de la despensa</button>
+        </div>
+        <div class="small muted" id="aliMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Registrar una compra</h2>
+      <p class="small muted" style="margin-bottom:8px">Suma a la despensa y, si escribe cuánto pagó, lo anota también como gasto de mercado.</p>
+      <form id="fCompra" autocomplete="off">
+        <label>Qué compró <select id="coItem"></select></label>
+        <div class="row2">
+          <label>Cuánto <input id="coCant" inputmode="decimal" placeholder="Ej.: 12"></label>
+          <label>Cuánto pagó en total <input id="coValor" inputmode="numeric" placeholder="$ 0"></label>
+        </div>
+        <button class="primary" id="coBtn" type="submit">Registrar compra</button>
+        <div class="small muted" id="coMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lista de compras</h2>
+      <div id="cCompras"><div class="empty">No le falta nada por ahora.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Preguntarle a Claude qué cocinar</h2>
+      <p class="small muted" style="margin-bottom:10px">Copia su despensa y lo que le queda de la quincena. Péguelo en un chat con Claude para pedirle recetas o un plan de compras.</p>
+      <button class="primary" id="cCopiar" type="button" style="width:100%">Copiar despensa y presupuesto</button>
+      <div class="small muted" id="cCopMsg" role="status" style="margin-top:6px"></div>
+      <textarea id="cCopTxt" hidden readonly></textarea>
     </div>
   </section>
 
@@ -272,13 +365,16 @@
   <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
   <button role="tab" data-tab="pagos" aria-selected="false">Pagos<span class="badge" id="badge" hidden></span></button>
   <button role="tab" data-tab="ingresos" aria-selected="false">Ingresos</button>
+  <button role="tab" data-tab="comida" aria-selected="false">Comida</button>
   <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
   <button role="tab" data-tab="mas" aria-selected="false">Más</button>
 </nav>
 
 <script src="js/motor.js"></script>
 <script src="js/almacen.js"></script>
+<script src="js/despensa.js"></script>
 <script src="js/app.js"></script>
+<script src="js/comida.js"></script>
 <script src="js/firebase-config.js"></script>
 <script type="module" src="js/nube.js"></script>
 </body>

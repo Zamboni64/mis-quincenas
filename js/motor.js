@@ -167,6 +167,8 @@ function construirLibro(d){
     ["Al colchón","colchon","$"],["Al primo","primo","$"],["A Apple","apple","$"],["Abono a capital","abono","$"],["Para gastar","gastar","$"]],
     filas:d.ingresos.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha)}).map(function(i){var a=d.calc.reparto.porId[i.id]||{colchon:0,primo:0,apple:0,abono:0},dd=i.destino==="deudas";
       return {fecha:i.fecha,origen:i.origen||i.concepto||"",valor:n(i.valor),destino:dd?"Colchón y deudas":"Para gastar",colchon:a.colchon,primo:a.primo,apple:a.apple,abono:a.abono,gastar:dd?0:n(i.valor)}})},
+   {nombre:"Despensa",cols:[["Alimento","nombre","",26],["Cantidad","cantidad","",16],["Avisar con menos de","minimo","",18],["Precio por unidad","precio","$"],["¿Se está acabando?","alerta","",18]],
+    filas:d.despensa||[]},
    {nombre:"Pagos",cols:[["Mes","mes","",12],["Pago","nombre","",22],["Fecha límite","fecha","f",13],["Valor","valor","$"],["¿Pagado?","pagado","",11]],
     filas:d.calc.pagos.map(function(p){return {mes:mesTxt(ym(p.fecha)),nombre:p.nombre,fecha:p.fecha,valor:p.valor,pagado:d.hechos[p.id]?"Sí":""}})},
    {nombre:"Plan de deudas",cols:[["Mes","mes","",12],["Davivienda: saldo inicial","davIni","$"],["Davivienda: interés","davInt","$"],["Davivienda: cuota sin seguro","davCuota","$"],

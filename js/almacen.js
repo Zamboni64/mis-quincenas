@@ -2,8 +2,8 @@
    Cada "tienda" es como una tabla. Todas usan el campo `id` como llave. */
 var Almacen = (function () {
   "use strict";
-  var NOMBRE = "mis-quincenas", VERSION = 1;
-  var TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes"];
+  var NOMBRE = "mis-quincenas", VERSION = 2; // sube cuando se agrega una tienda nueva
+  var TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa"];
   var bd = null;
 
   function abrir() {
