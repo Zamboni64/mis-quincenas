@@ -82,7 +82,14 @@ const MENSAJES = {
   "auth/operation-not-allowed": "El inicio con correo y contraseña no está activado en Firebase.",
   "auth/admin-restricted-operation": "La creación de cuentas nuevas está desactivada en Firebase."
 };
-function traducir(e) { return MENSAJES[e && e.code] || "No se pudo completar. Intente de nuevo."; }
+function traducir(e) {
+  var c = (e && e.code) || "";
+  if (MENSAJES[c]) return MENSAJES[c];
+  if (c.indexOf("api-key") >= 0) return "La clave de Firebase (apiKey) no es válida. Revise js/firebase-config.js. [" + c + "]";
+  if (c.indexOf("requests-from-referer") >= 0 || c === "auth/unauthorized-domain") return "Firebase no acepta solicitudes desde esta dirección. Revise los dominios autorizados. [" + c + "]";
+  // Se muestra el código del error para poder diagnosticarlo.
+  return "No se pudo completar. [" + (c || (e && e.message) || "error desconocido") + "]";
+}
 function requiere() { if (!estado.disponible) return Promise.reject(new Error("La sincronización no está disponible en este momento. Revise la conexión.")); return null; }
 
 window.Nube = {

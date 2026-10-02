@@ -5,7 +5,7 @@
    2. El navegador nota que este archivo cambió, descarga TODOS los archivos de nuevo a una caché nueva
       y, cuando termina, reemplaza la anterior de un solo golpe. Así nunca quedan mezclados archivos viejos y nuevos.
    3. La app abierta se recarga sola una vez para mostrar la versión nueva. */
-const VERSION = "2.1";
+const VERSION = "2.2";
 const CACHE = "mis-quincenas-app-" + VERSION;
 const CACHE_FIREBASE = "mis-quincenas-firebase"; // librerías de Firebase: no cambian, se conservan entre versiones
 const ARCHIVOS = [
