@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mis Quincenas</title>
+<meta name="description" content="Presupuesto personal por quincenas: gastos, pagos, otros ingresos y plan de deudas.">
+<meta name="theme-color" content="#0E6B5A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Quincenas">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Mis Quincenas</h1>
+    <span class="small muted num" id="hoyTxt"></span>
+  </div>
+
+  <!-- ===================== HOY ===================== -->
+  <section class="tab" id="tab-hoy">
+    <div class="card" id="bienvenida" hidden>
+      <h2>Empiece por cargar sus datos</h2>
+      <p class="small muted" style="margin-bottom:10px">La app todavía está vacía en este teléfono. Cargue el archivo de respaldo con sus datos, o empiece en cero y llénelos en la pestaña "Más".</p>
+      <div class="stack">
+        <button class="primary" id="bvRestaurar" type="button">Cargar un respaldo</button>
+        <button class="ghost" id="bvCero" type="button">Empezar en cero</button>
+      </div>
+      <div class="small muted" id="bvMsg" role="status" style="margin-top:6px"></div>
+    </div>
+    <div class="top">
+      <div class="qnav">
+        <button id="qPrev" aria-label="Quincena anterior">‹</button>
+        <div class="qlabel" id="qLabel">Quincena</div>
+        <button id="qNext" aria-label="Quincena siguiente">›</button>
+      </div>
+      <button class="del" id="qHoy" hidden>Ir a la actual</button>
+    </div>
+
+    <div class="card hero" id="hero">
+      <div class="lab" id="heroLab">Le queda en esta quincena</div>
+      <div class="big num" id="heroBig">…</div>
+      <div class="sub num" id="heroSub">Cargando sus datos</div>
+      <div class="bar"><i id="heroBar" style="width:0%"></i></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b class="num" id="stLibre">–</b><span>Libre de la quincena</span></div>
+      <div class="stat"><b class="num" id="stExtra">–</b><span>Ingresos extra</span></div>
+      <div class="stat"><b class="num" id="stGasto">–</b><span>Gastado</span></div>
+    </div>
+
+    <button class="note bad" id="alertaPagos" hidden></button>
+    <div class="note warn" id="notaAparta" hidden></div>
+
+    <div class="card">
+      <h2>Anotar un gasto</h2>
+      <form id="fGasto" autocomplete="off">
+        <label class="valor">Valor
+          <input id="gValor" inputmode="numeric" placeholder="$ 0" required>
+        </label>
+        <div class="row2">
+          <label>Categoría
+            <select id="gCat"></select>
+          </label>
+          <label>Fecha
+            <input id="gFecha" type="date" required>
+          </label>
+        </div>
+        <label>Descripción (opcional)
+          <input id="gDesc" maxlength="80" placeholder="Ej.: almuerzo, gasolina">
+        </label>
+        <div class="seg" id="gMedio">
+          <button type="button" data-v="Efectivo o débito" aria-pressed="true">Efectivo o débito</button>
+          <button type="button" data-v="Tarjeta Davibank" aria-pressed="false">Tarjeta Davibank</button>
+        </div>
+        <button class="primary" id="gBtn" type="submit">Guardar gasto</button>
+        <div class="small muted" id="gMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Gastos de esta quincena</h2>
+      <div class="list" id="listaGastos"><div class="empty">Aquí aparecerán los gastos que anote.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>En qué se fue</h2>
+      <div id="cats"><div class="empty">Sin gastos anotados en esta quincena.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>De dónde sale lo libre</h2>
+      <div id="detalleQ"><div class="empty">Cargando…</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== PAGOS ===================== -->
+  <section class="tab" id="tab-pagos" hidden>
+    <div class="note ok" id="pagosEstado">Cargando pagos…</div>
+    <div class="card"><h2>Vencidos o por vencer</h2><div class="list" id="pgAlerta"></div></div>
+    <div class="card"><h2 id="pgMesT">Este mes</h2><div class="list" id="pgMes"></div></div>
+    <div class="card"><h2 id="pgSigT">Mes siguiente</h2><div class="list" id="pgSig"></div></div>
+    <p class="small muted">Las libranzas, los seguros, YouTube e iCloud no aparecen porque se debitan solos.</p>
+  </section>
+
+  <!-- ===================== INGRESOS ===================== -->
+  <section class="tab" id="tab-ingresos" hidden>
+    <div class="card">
+      <h2>Plata que me deben</h2>
+      <div class="list" id="meDeben"><div class="empty">Cargando…</div></div>
+      <p class="small muted" style="margin-top:8px">No cuenta en el presupuesto hasta que anote el pago aquí abajo.</p>
+    </div>
+
+    <div class="card">
+      <h2>Anotar plata que entró</h2>
+      <form id="fIng" autocomplete="off">
+        <div class="row2">
+          <label>Valor <input id="iValor" inputmode="numeric" placeholder="$ 0" required></label>
+          <label>Fecha <input id="iFecha" type="date" required></label>
+        </div>
+        <label>De dónde viene <select id="iOrigen"></select></label>
+        <div class="seg" id="iDestino">
+          <button type="button" data-v="deudas" aria-pressed="true">Colchón y deudas</button>
+          <button type="button" data-v="gastar" aria-pressed="false">Para gastar</button>
+        </div>
+        <p class="small muted" id="iAyuda"></p>
+        <button class="primary" id="iBtn" type="submit">Guardar</button>
+        <div class="small muted" id="iMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lo que ha entrado</h2>
+      <div class="list" id="listaIng"><div class="empty">Aún no ha anotado ingresos aparte del sueldo.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Qué pasa con la prima de diciembre</h2>
+      <div id="primaDic"><div class="empty">Cargando…</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== PLAN ===================== -->
+  <section class="tab" id="tab-plan" hidden>
+    <div class="note plain" id="planResumen">Cargando el plan…</div>
+    <div class="card"><h2>Cuándo termina cada deuda</h2><div class="list" id="planFin"></div></div>
+    <div class="card"><h2>Saldo de las deudas mes a mes</h2><div class="scroll" id="planMeses"></div></div>
+    <div class="card"><h2>Próximas quincenas</h2><div class="scroll" id="planQ"></div></div>
+  </section>
+
+  <!-- ===================== MÁS ===================== -->
+  <section class="tab" id="tab-mas" hidden>
+    <div class="card">
+      <h2>Preguntarle a Claude</h2>
+      <p class="small muted" style="margin-bottom:10px">Copia un resumen de sus finanzas de hoy. Péguelo en un chat con Claude y escriba su pregunta, por ejemplo si le conviene hacer una compra.</p>
+      <button class="primary" id="copiarResumen" type="button" style="width:100%">Copiar resumen</button>
+      <div class="small muted" id="resMsg" role="status" style="margin-top:6px"></div>
+      <textarea id="resTxt" hidden readonly></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Respaldo</h2>
+      <p class="small muted" style="margin-bottom:10px">Sus datos viven solo en este teléfono. Guarde un respaldo cada cierto tiempo: es la única forma de recuperarlos si cambia de celular o se borran los datos del navegador.</p>
+      <div class="stack">
+        <button class="primary" id="guardarResp" type="button">Guardar respaldo</button>
+        <button class="ghost" id="restaurarResp" type="button">Restaurar un respaldo</button>
+      </div>
+      <div class="small muted" id="respMsg" role="status" style="margin-top:6px"></div>
+      <input id="archivoResp" type="file" accept="application/json,.json" hidden>
+    </div>
+
+    <div class="card">
+      <h2>Pasar todo a Excel</h2>
+      <p class="small muted" style="margin-bottom:10px">Crea un archivo con seis hojas: quincenas, gastos, otros ingresos, pagos, plan de deudas y datos. Son los valores de hoy, sin fórmulas.</p>
+      <button class="primary" id="exportar" type="button" style="width:100%">Exportar a Excel</button>
+      <div class="small muted" id="expMsg" role="status" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Corregir lo libre de una quincena</h2>
+      <p class="small muted" style="margin-bottom:10px">Para un caso puntual, por ejemplo si el casino salió distinto. Aplica a la quincena que tiene abierta en "Hoy". Déjelo vacío para volver al cálculo normal.</p>
+      <form id="fAj">
+        <div class="row2">
+          <label id="aLab">Libre <input id="aLibre" inputmode="numeric"></label>
+          <button class="primary" id="aBtn" type="submit" style="align-self:end">Guardar</button>
+        </div>
+        <div class="small muted" id="aMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Mis datos</h2>
+      <p class="small muted" style="margin-bottom:6px">Con estos valores se calcula todo. Si cambia uno, las quincenas y el plan se recalculan.</p>
+      <form id="fDatos">
+        <div id="camposDatos"><div class="empty">Cargando…</div></div>
+        <button class="primary" id="dBtn" type="submit">Guardar cambios</button>
+        <div class="small muted" id="dMsg" role="status"></div>
+      </form>
+    </div>
+
+    <p class="small muted" id="version"></p>
+  </section>
+</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="hoy" aria-selected="true">Hoy</button>
+  <button role="tab" data-tab="pagos" aria-selected="false">Pagos<span class="badge" id="badge" hidden></span></button>
+  <button role="tab" data-tab="ingresos" aria-selected="false">Ingresos</button>
+  <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
+  <button role="tab" data-tab="mas" aria-selected="false">Más</button>
+</nav>
+
+<script src="js/motor.js"></script>
+<script src="js/almacen.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

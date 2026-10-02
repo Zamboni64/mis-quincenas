@@ -1,0 +1,16 @@
+{
+  "name": "Mis Quincenas",
+  "short_name": "Quincenas",
+  "description": "Presupuesto personal por quincenas: gastos, pagos, otros ingresos y plan de deudas.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F5F3",
+  "theme_color": "#0E6B5A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
