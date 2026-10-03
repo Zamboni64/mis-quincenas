@@ -344,7 +344,18 @@ var Despensa = (function () {
     return cambio ? nueva : null;
   }
 
-  return { PIEZAS: PIEZAS, porPaq: porPaq, piezas: piezas, conPiezas: conPiezas, conEquivalente: conEquivalente, nombrePieza: nombrePieza, trasCorreccion: trasCorreccion, trasCompra: trasCompra, aprende: aprende,
+  // Con qué pieza se llena el formulario cuando el alimento no dice una: la del catálogo, o su propia unidad si sirve como pieza (huevos: unidades).
+  function piezaSugerida(nombre) { var s = sugerido(nombre); if (!s) return "porciones"; return s.pieza || (PIEZAS.indexOf(s.unidad) >= 0 ? s.unidad : "porciones"); }
+  /* Comidas que rinde cada unidad de compra cuando se dice cuánto trae:
+     en porciones, lo mismo que trae; si las piezas son la unidad del catálogo (una caja de 36 huevos), lo que rinde cada pieza por las que trae. */
+  function rindeCon(nombre, trae, pieza, rol, actual) {
+    if (rol !== "base" && rol !== "proteina") return actual;
+    if (unidadBase(pieza || "porciones") === "porcion") return trae;
+    var s = sugerido(nombre); if (s && !s.porPaquete && s.rinde && unidadBase(pieza) === unidadBase(s.unidad)) return Math.round(trae * s.rinde * 100) / 100;
+    return actual;
+  }
+
+  return { piezaSugerida: piezaSugerida, rindeCon: rindeCon, PIEZAS: PIEZAS, porPaq: porPaq, piezas: piezas, conPiezas: conPiezas, conEquivalente: conEquivalente, nombrePieza: nombrePieza, trasCorreccion: trasCorreccion, trasCompra: trasCompra, aprende: aprende,
     faltaDe: faltaDe, anotarCompra: anotarCompra, MOMENTOS: MOMENTOS, leerMenu: leerMenu, interna: interna, estadoIngredientes: estadoIngredientes, delRecetario: delRecetario,
     UNIDADES: UNIDADES, partes: partes, equivalente: equivalente, ajustarNivel: ajustarNivel, textoUnidades: textoUnidades, textoNivel: textoNivel, sinReceta: sinReceta,
     catalogo: catalogo, sugerido: sugerido, clave: clave, enAlerta: enAlerta, resumen: resumen, diasQueDura: diasQueDura, recetas: recetas, cocinar: cocinar,

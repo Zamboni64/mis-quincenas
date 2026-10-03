@@ -238,7 +238,7 @@
           <button type="button" data-v="nivel" aria-pressed="false">Poco, medio o lleno</button>
         </div>
         <div class="row2">
-          <label>Cuánto tengo <input id="aliCant" inputmode="decimal" placeholder="Ej.: 8"></label>
+          <label><span id="aliCantL">Cuánto tengo</span> <input id="aliCant" inputmode="decimal" placeholder="Ej.: 8"></label>
           <label>Unidad <select id="aliUnidad"></select></label>
         </div>
         <div class="row2">
@@ -250,6 +250,7 @@
           <label><span><span id="aliTraeL">Cada unidad trae</span> (opcional)</span> <input id="aliTrae" inputmode="decimal" placeholder="Ej.: 20"></label>
           <label>de <select id="aliPieza"></select></label>
         </div>
+        <label id="aliSueltasL" hidden><span id="aliSueltasTxt">Sueltos, aparte de los completos</span> <input id="aliSueltas" inputmode="decimal" placeholder="Ej.: 7"></label>
         <p class="small muted" id="aliTraeAyuda">Para lo que se compra por paquete y se gasta de a poco: una bolsa de pan trae 20 tajadas; un paquete de espaguetis le rinde 4 porciones. Si no sabe cuánto le rinde, deje el valor sugerido: la app se lo ajusta con el uso.</p>
         <p class="small muted" id="aliAyuda" hidden>Cuente todas las que tiene, incluida la que está en uso. Ejemplo: dos bolsas de arroz, una llena y otra por la mitad: escriba 2 y elija Medio. Le avisa cuando solo le quede una y esté en Poco.</p>
         <details>

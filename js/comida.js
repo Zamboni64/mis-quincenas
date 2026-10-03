@@ -118,12 +118,23 @@ function mostrarTipo(t) { tipo = t; Array.prototype.forEach.call($("aliTipo").ch
 // Los rótulos cambian con la unidad y la pieza: "Cada bolsa trae … tajadas", "Avisarme con menos de … (tajadas)".
 function rotulos() { var u = $("aliUnidad").value || "unidades", trae = dec($("aliTrae").value);
   $("aliTraeL").textContent = "Cada " + Despensa.unidadTxt(u, 1) + " trae";
-  $("aliMinU").textContent = "(" + (trae ? $("aliPieza").value : u) + ")"; }
+  $("aliMinU").textContent = "(" + (trae ? $("aliPieza").value : u) + ")";
+  // Con piezas, lo que hay se escribe en dos casillas: las unidades completas (cajas) y lo suelto (huevos).
+  var dos = !!trae && tipo !== "nivel", fem = articulo(u) === "la";
+  $("aliSueltasL").hidden = !dos;
+  $("aliCantL").textContent = dos ? u.charAt(0).toUpperCase() + u.slice(1) + (fem ? " completas" : " completos") : "Cuánto tengo";
+  $("aliSueltasTxt").textContent = "Y además, de " + (fem ? "una empezada" : "uno empezado") + " (" + $("aliPieza").value + ")"; }
 $("aliPieza").innerHTML = Despensa.PIEZAS.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
 function ponerPieza(u) { var sel = $("aliPieza"); u = u || "porciones";
   if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
   sel.value = u; }
 ["aliTrae", "aliPieza"].forEach(function (id) { $(id).addEventListener("input", rotulos); $(id).addEventListener("change", rotulos); });
+// Al ponerle "cada caja trae 36" a un alimento que estaba contado por piezas (7 huevos), esos 7 pasan a la casilla de sueltos y las cajas completas quedan en 0.
+$("aliTrae").addEventListener("change", function () { var it = editando ? buscar(editando) : null;
+  if (!it || tipo === "nivel" || Despensa.porPaq(it) || !dec(this.value) || $("aliSueltas").value.trim() !== "") return;
+  if (Despensa.clave(Despensa.unidadTxt(it.unidad || "unidades", 1)) !== Despensa.clave(Despensa.unidadTxt($("aliPieza").value, 1))) return;
+  $("aliSueltas").value = $("aliCant").value; $("aliCant").value = "0";
+  $("aliMsg").textContent = "Pasé lo que tenía a la casilla de sueltos. Revise las dos casillas, el precio (ahora va por " + Despensa.unidadTxt($("aliUnidad").value, 1) + ") y guarde."; });
 // La unidad se elige de una lista. Si un alimento guardado trae otra, se agrega a la lista para no perderla.
 function ponerUnidad(u) { var sel = $("aliUnidad"); u = u || "unidades";
   if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
@@ -135,7 +146,11 @@ function cargarForm(it) { editando = it.id; $("aliNombre").value = it.nombre; mo
   var p = it.tipo === "nivel" ? Despensa.partes(it) : null;
   $("aliCant").value = p ? String(p.unidades) : Despensa.cant(it.cantidad); ponerUnidad(it.unidad); $("aliMin").value = Despensa.cant(it.minimo); $("aliPrecio").value = it.precio ? money(it.precio) : "";
   $("aliNivel").value = String(p && p.nivel ? p.nivel : 3); $("aliRol").value = it.rol || "otro"; $("aliRinde").value = it.rinde ? Despensa.cant(it.rinde) : "";
-  $("aliTrae").value = Despensa.porPaq(it) ? Despensa.cant(it.porPaquete) : ""; ponerPieza(it.pieza); rotulos();
+  $("aliTrae").value = Despensa.porPaq(it) ? Despensa.cant(it.porPaquete) : ""; ponerPieza(it.pieza || Despensa.piezaSugerida(it.nombre)); $("aliSueltas").value = "";
+  if (!p && Despensa.porPaq(it)) { // completas y sueltas: 1,2 cajas de 36 = 1 caja y 7 huevos
+    var enteras = Math.floor(it.cantidad + 1e-6), sueltas = Math.round((it.cantidad - enteras) * it.porPaquete * 10) / 10;
+    $("aliCant").value = String(enteras); $("aliSueltas").value = sueltas ? Despensa.cant(sueltas) : ""; }
+  rotulos();
   $("cFormT").textContent = "Editar " + it.nombre; $("aliBtn").textContent = "Guardar cambios"; $("aliCancelar").hidden = false; $("aliQuitar").hidden = false;
   $("fAli").scrollIntoView({ block: "center" }); }
 A.segmento("aliTipo", mostrarTipo);
@@ -146,7 +161,7 @@ $("cCatalogo").innerHTML = Despensa.catalogo().map(function (c) { return '<optio
 $("aliNombre").addEventListener("change", function () { var k = Despensa.clave(this.value); if (k === ultimoSugerido) return; ultimoSugerido = k;
   var s = Despensa.sugerido(this.value); if (!s || editando) return;
   mostrarTipo(s.tipo); ponerUnidad(s.unidad); $("aliMin").value = Despensa.cant(s.minimo); $("aliRol").value = s.rol; $("aliRinde").value = s.rinde ? Despensa.cant(s.rinde) : "";
-  $("aliTrae").value = s.porPaquete ? Despensa.cant(s.porPaquete) : ""; ponerPieza(s.pieza); rotulos(); });
+  $("aliTrae").value = s.porPaquete ? Despensa.cant(s.porPaquete) : ""; ponerPieza(Despensa.piezaSugerida(this.value)); rotulos(); });
 $("fAli").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("aliMsg"), nombre = $("aliNombre").value.trim(); if (!nombre) return;
   var clave = Despensa.clave(nombre), previo = editando ? buscar(editando) : null;
   if (!previo && (S.despensa || []).some(function (x) { return (x.clave || Despensa.clave(x.nombre)) === clave; })) { msg.textContent = "Ese alimento ya está en la despensa. Use Editar o los botones + y −."; return; }
@@ -155,9 +170,10 @@ $("fAli").addEventListener("submit", function (e) { e.preventDefault(); var msg 
   if (tipo === "nivel") { // cuántas hay (si no escribe nada, una) y cómo está la que está en uso
     it.cantidad = $("aliCant").value.trim() === "" ? 1 : Math.round(dec($("aliCant").value)); it.nivel = it.cantidad > 0 ? parseInt($("aliNivel").value, 10) : 0; it.minimo = 0;
   } else { it.cantidad = dec($("aliCant").value); it.minimo = dec($("aliMin").value); }
-  // Cuánto trae cada unidad. Si son porciones de una base o una proteína, eso mismo es lo que rinde en comidas.
+  // Cuánto trae cada unidad. Con eso se calcula solo cuántas comidas rinde, y lo suelto se suma a las completas.
   var trae = dec($("aliTrae").value);
-  if (trae) { it.porPaquete = trae; it.pieza = $("aliPieza").value || "porciones"; if (it.pieza === "porciones" && (it.rol === "base" || it.rol === "proteina")) it.rinde = trae; }
+  if (trae) { it.porPaquete = trae; it.pieza = $("aliPieza").value || "porciones"; it.rinde = Despensa.rindeCon(nombre, trae, it.pieza, it.rol, it.rinde);
+    if (tipo !== "nivel") it.cantidad = Math.round((it.cantidad + dec($("aliSueltas").value) / trae) * 10000) / 10000; }
   it = Despensa.trasCorreccion(previo, it);
   var btn = $("aliBtn"); btn.disabled = true;
   guardarAlimento(it).then(function () { limpiarForm(); msg.textContent = "Guardado: " + nombre + "."; A.render(); })
@@ -222,7 +238,7 @@ $("fCompra").addEventListener("submit", function (e) { e.preventDefault();
   var c = Object.assign({}, it), traeAntes = Despensa.porPaq(it), trae = traeAntes ? (dec($("coTrae").value) || traeAntes) : 0, tenia = it.cantidad;
   if (trae && trae !== traeAntes) { // el paquete de hoy trae otra cantidad: lo que quedaba se conserva en piezas
     c.porPaquete = trae; if (it.tipo !== "nivel") tenia = Despensa.piezas(it) / trae;
-    if ((it.pieza || "porciones") === "porciones" && (it.rol === "base" || it.rol === "proteina")) c.rinde = trae; }
+    if (it.rinde && (it.rol === "base" || it.rol === "proteina")) c.rinde = Math.round(it.rinde * trae / traeAntes * 100) / 100; }
   if (it.tipo === "nivel") { // las unidades nuevas llegan llenas; la que estaba en uso sigue como estaba
     cantidad = Math.max(1, Math.round(cantidad)); var p = Despensa.partes(it);
     c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel; if (p.unidades === 0) delete c.fino;
@@ -251,7 +267,7 @@ function revertirCompra(g) {
     if (it.tipo === "nivel") { var p = Despensa.partes(it), u = Math.max(0, p.unidades - Math.round(c.cantidad)); x.cantidad = u; x.nivel = u > 0 ? p.nivel : 0; }
     else if (c.trae && c.traeAntes && c.trae !== c.traeAntes && it.porPaquete === c.trae) { // la compra había cambiado cuánto trae el paquete: se devuelve
       x.porPaquete = c.traeAntes; x.cantidad = Math.max(0, Math.round((Despensa.piezas(it) - c.cantidad * c.trae) / c.traeAntes * 10000) / 10000);
-      if ((it.pieza || "porciones") === "porciones" && (it.rol === "base" || it.rol === "proteina")) x.rinde = c.traeAntes; }
+      if (it.rinde && (it.rol === "base" || it.rol === "proteina")) x.rinde = Math.round(it.rinde * c.traeAntes / c.trae * 100) / 100; }
     else x.cantidad = Math.max(0, Math.round((it.cantidad - c.cantidad) * 10000) / 10000);
     if (it.precio === c.precio) x.precio = c.precioAntes || 0; // solo si nadie cambió el precio después
     x = Despensa.trasCorreccion(null, x); // el seguimiento de cuánto rinde empieza de nuevo
