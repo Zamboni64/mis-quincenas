@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.7";
+var VERSION_APP = "3.8";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -366,7 +366,7 @@ $("exportar").addEventListener("click", function () {
   (S.P.fijosExtra || []).forEach(function (x) { datos.push(["Otro gasto fijo: " + x.nombre + " (día " + x.dia + ", desde " + x.desde + ")", x.valor, "$"]); });
   datos.push(["Exportado el", hoyISO(), ""]);
   var filasDespensa = S.despensa.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre); }).map(function (it) {
-    return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "La última en poco" : Despensa.cant(it.minimo) + " " + (it.unidad || ""), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
+    return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "La última en poco" : Despensa.cant(it.minimo) + " " + (Despensa.porPaq(it) ? (it.pieza || "porciones") : (it.unidad || "")), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
   var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos, despensa: filasDespensa });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
 });

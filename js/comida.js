@@ -51,7 +51,7 @@ function render() {
     if (x.listas.length) html += '<div class="subt">Con lo que tiene</div>' + x.listas.map(function (a) {
       var como = a.receta.propia && a.receta.como.length > 170 ? a.receta.como.slice(0, 170) + "… (completa en Mis recetas)" : a.receta.como;
       return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>' + esc(como) + (isFinite(a.veces) ? ' Le alcanza para ' + a.veces + (a.veces === 1 ? ' vez.' : ' veces.') : '') + '</p>' +
-        '<button class="ghost" type="button" data-cocinar="' + esc(a.receta.nombre) + '">La preparé: descontar</button></div>'; }).join("");
+        selPorciones() + '<button class="ghost" type="button" data-cocinar="' + esc(a.receta.nombre) + '">La preparé: descontar</button></div></div>'; }).join("");
     else html += '<div class="empty">Con lo que tiene no sale ninguna receta del recetario para este momento.</div>';
     if (x.casi.length) html += '<div class="subt">Comprando una o dos cosas</div>' + x.casi.slice(0, 5).map(function (a) {
       var costo = 0, sin = false; a.faltan.forEach(function (f) { if (f.precio) costo += f.precio * Math.max(1, Math.ceil(f.necesita - f.tiene)); else sin = true; });
@@ -67,10 +67,13 @@ function render() {
   if (!items.length) L.innerHTML = '<div class="empty">Aún no ha agregado alimentos.</div>';
   else L.innerHTML = items.slice().sort(function (a, b) { return (Despensa.enAlerta(b) - Despensa.enAlerta(a)) || porNombre(a, b); }).map(function (it) {
     return '<div class="item' + (Despensa.enAlerta(it) ? ' alerta' : '') + '"><div class="tx"><b>' + esc(it.nombre) + '</b><span>' +
-      (Despensa.enAlerta(it) ? 'Se está acabando · ' : '') + (it.precio ? money(it.precio) + ' c/u · ' : '') + '<button class="del" type="button" data-editar="' + esc(it.id) + '">Editar</button></span></div>' +
+      (Despensa.enAlerta(it) ? 'Se está acabando · ' : '') + (it.precio ? money(it.precio) + (Despensa.porPaq(it) ? ' ' + articulo(it.unidad) + ' ' + Despensa.unidadTxt(it.unidad, 1) : ' c/u') + ' · ' : '') + '<button class="del" type="button" data-editar="' + esc(it.id) + '">Editar</button></span></div>' +
       '<button class="mini" type="button" data-menos="' + esc(it.id) + '" aria-label="Menos ' + esc(it.nombre) + '">−</button>' +
-      '<span class="qty num">' + esc(Despensa.textoUnidades(it)) + (Despensa.textoNivel(it) ? '<small>' + esc(Despensa.textoNivel(it)) + '</small>' : '') + '</span>' +
-      '<button class="mini" type="button" data-mas="' + esc(it.id) + '" aria-label="Más ' + esc(it.nombre) + '">+</button></div>'; }).join("");
+      '<span class="qty num">' + esc(Despensa.textoUnidades(it)) + Despensa.textoNivel(it).split(", ").filter(Boolean).map(function (x) { return '<small>' + esc(x) + '</small>'; }).join("") + '</span>' +
+      '<button class="mini" type="button" data-mas="' + esc(it.id) + '" aria-label="Más ' + esc(it.nombre) + '">+</button></div>' +
+      // propuesta de cuánto rinde, aprendida del uso
+      (it.rindeSug ? '<div class="note plain sug">A usted cada ' + esc(Despensa.unidadTxt(it.unidad || "unidades", 1)) + ' de ' + esc(it.nombre.toLowerCase()) + ' le rindió ' + it.rindeSug + ' porciones, y la app cuenta ' + Despensa.cant(Despensa.porPaq(it)) +
+        '. <button class="del" type="button" data-rinde-si="' + esc(it.id) + '">Usar ' + it.rindeSug + '</button> <button class="del" type="button" data-rinde-no="' + esc(it.id) + '">Dejar ' + Despensa.cant(Despensa.porPaq(it)) + '</button></div>' : ''); }).join("");
   // selector de compra
   var sel = $("coItem"), ops = items.slice().sort(porNombre).map(function (it) { return it.id + "|" + it.nombre; }).join("\n");
   if (sel.dataset.ops !== ops) { var prev = sel.value; sel.innerHTML = items.slice().sort(porNombre).map(function (it) { return '<option value="' + esc(it.id) + '">' + esc(it.nombre) + '</option>'; }).join("") +
@@ -96,28 +99,43 @@ function render() {
 function ponerEnMemoria(it) { var i = S.despensa.findIndex(function (x) { return x.id === it.id; }); if (i >= 0) S.despensa[i] = it; else S.despensa.push(it); }
 function guardarAlimento(it) { return A.guardar("despensa", it).then(function () { ponerEnMemoria(it); }); }
 function buscar(id) { return (S.despensa || []).filter(function (x) { return x.id === id; })[0]; }
+function articulo(u) { return /as?$/.test(u || "") || /des$/.test(u || "") ? "la" : "el"; } // la bolsa, la libra, la unidad; el paquete, el litro
+// Selector "para cuántas porciones" que acompaña al botón "La preparé" (el día que hay visita se gasta más).
+function selPorciones() { return '<div class="fila"><label class="chico">Porciones <select data-veces>' + [1, 2, 3, 4, 5, 6].map(function (v) { return '<option value="' + v + '">' + v + '</option>'; }).join("") + '</select></label>'; }
+window.MQ.selPorciones = selPorciones;
 function ajustar(id, paso) {
   var it = buscar(id); if (!it) return;
   var c = Object.assign({}, it);
-  if (it.tipo === "nivel") { var nv = Despensa.ajustarNivel(it, paso); c.cantidad = nv.cantidad; c.nivel = nv.nivel; }
+  if (it.tipo === "nivel") { var nv = Despensa.ajustarNivel(it, paso); c.cantidad = nv.cantidad; c.nivel = nv.nivel; delete c.fino; } // corrección a ojo: manda lo que usted ve
+  else if (Despensa.porPaq(it)) c = Despensa.conPiezas(it, Math.round(Despensa.piezas(it)) === Despensa.piezas(it) ? Despensa.piezas(it) + paso : (paso > 0 ? Math.ceil(Despensa.piezas(it)) : Math.floor(Despensa.piezas(it)))); // de a una pieza
   else c.cantidad = Math.max(0, Math.round((it.cantidad + paso) * 100) / 100);
-  guardarAlimento(c).then(A.render).catch(function () {});
+  guardarAlimento(Despensa.trasCorreccion(it, c)).then(A.render).catch(function () {});
 }
 
 /* ---------- formulario de alimento ---------- */
 function mostrarTipo(t) { tipo = t; Array.prototype.forEach.call($("aliTipo").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === t)); });
-  var nv = (t === "nivel"); $("aliMinL").hidden = nv; $("aliNivelL").hidden = !nv; $("aliAyuda").hidden = !nv; $("aliCant").placeholder = nv ? "Ej.: 2" : "Ej.: 8"; }
+  var nv = (t === "nivel"); $("aliMinL").hidden = nv; $("aliNivelL").hidden = !nv; $("aliAyuda").hidden = !nv; $("aliCant").placeholder = nv ? "Ej.: 2" : "Ej.: 8"; rotulos(); }
+// Los rótulos cambian con la unidad y la pieza: "Cada bolsa trae … tajadas", "Avisarme con menos de … (tajadas)".
+function rotulos() { var u = $("aliUnidad").value || "unidades", trae = dec($("aliTrae").value);
+  $("aliTraeL").textContent = "Cada " + Despensa.unidadTxt(u, 1) + " trae";
+  $("aliMinU").textContent = "(" + (trae ? $("aliPieza").value : u) + ")"; }
+$("aliPieza").innerHTML = Despensa.PIEZAS.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
+function ponerPieza(u) { var sel = $("aliPieza"); u = u || "porciones";
+  if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
+  sel.value = u; }
+["aliTrae", "aliPieza"].forEach(function (id) { $(id).addEventListener("input", rotulos); $(id).addEventListener("change", rotulos); });
 // La unidad se elige de una lista. Si un alimento guardado trae otra, se agrega a la lista para no perderla.
 function ponerUnidad(u) { var sel = $("aliUnidad"); u = u || "unidades";
   if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
   sel.value = u; }
 $("aliUnidad").innerHTML = Despensa.UNIDADES.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
-function limpiarForm() { editando = null; ultimoSugerido = ""; $("fAli").reset(); mostrarTipo("contable"); $("cFormT").textContent = "Agregar un alimento"; $("aliBtn").textContent = "Guardar alimento";
+function limpiarForm() { editando = null; ultimoSugerido = ""; $("fAli").reset(); ponerPieza("porciones"); mostrarTipo("contable"); $("cFormT").textContent = "Agregar un alimento"; $("aliBtn").textContent = "Guardar alimento";
   $("aliCancelar").hidden = true; $("aliQuitar").hidden = true; $("aliQuitar").classList.remove("sure"); $("aliQuitar").textContent = "Quitar de la despensa"; }
 function cargarForm(it) { editando = it.id; $("aliNombre").value = it.nombre; mostrarTipo(it.tipo || "contable");
   var p = it.tipo === "nivel" ? Despensa.partes(it) : null;
   $("aliCant").value = p ? String(p.unidades) : Despensa.cant(it.cantidad); ponerUnidad(it.unidad); $("aliMin").value = Despensa.cant(it.minimo); $("aliPrecio").value = it.precio ? money(it.precio) : "";
   $("aliNivel").value = String(p && p.nivel ? p.nivel : 3); $("aliRol").value = it.rol || "otro"; $("aliRinde").value = it.rinde ? Despensa.cant(it.rinde) : "";
+  $("aliTrae").value = Despensa.porPaq(it) ? Despensa.cant(it.porPaquete) : ""; ponerPieza(it.pieza); rotulos();
   $("cFormT").textContent = "Editar " + it.nombre; $("aliBtn").textContent = "Guardar cambios"; $("aliCancelar").hidden = false; $("aliQuitar").hidden = false;
   $("fAli").scrollIntoView({ block: "center" }); }
 A.segmento("aliTipo", mostrarTipo);
@@ -127,7 +145,8 @@ $("cCatalogo").innerHTML = Despensa.catalogo().map(function (c) { return '<optio
 // Solo una vez por alimento, para no pisar lo que usted cambie después (por ejemplo la unidad).
 $("aliNombre").addEventListener("change", function () { var k = Despensa.clave(this.value); if (k === ultimoSugerido) return; ultimoSugerido = k;
   var s = Despensa.sugerido(this.value); if (!s || editando) return;
-  mostrarTipo(s.tipo); ponerUnidad(s.unidad); $("aliMin").value = Despensa.cant(s.minimo); $("aliRol").value = s.rol; $("aliRinde").value = s.rinde ? Despensa.cant(s.rinde) : ""; });
+  mostrarTipo(s.tipo); ponerUnidad(s.unidad); $("aliMin").value = Despensa.cant(s.minimo); $("aliRol").value = s.rol; $("aliRinde").value = s.rinde ? Despensa.cant(s.rinde) : "";
+  $("aliTrae").value = s.porPaquete ? Despensa.cant(s.porPaquete) : ""; ponerPieza(s.pieza); rotulos(); });
 $("fAli").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("aliMsg"), nombre = $("aliNombre").value.trim(); if (!nombre) return;
   var clave = Despensa.clave(nombre), previo = editando ? buscar(editando) : null;
   if (!previo && (S.despensa || []).some(function (x) { return (x.clave || Despensa.clave(x.nombre)) === clave; })) { msg.textContent = "Ese alimento ya está en la despensa. Use Editar o los botones + y −."; return; }
@@ -136,14 +155,20 @@ $("fAli").addEventListener("submit", function (e) { e.preventDefault(); var msg 
   if (tipo === "nivel") { // cuántas hay (si no escribe nada, una) y cómo está la que está en uso
     it.cantidad = $("aliCant").value.trim() === "" ? 1 : Math.round(dec($("aliCant").value)); it.nivel = it.cantidad > 0 ? parseInt($("aliNivel").value, 10) : 0; it.minimo = 0;
   } else { it.cantidad = dec($("aliCant").value); it.minimo = dec($("aliMin").value); }
+  // Cuánto trae cada unidad. Si son porciones de una base o una proteína, eso mismo es lo que rinde en comidas.
+  var trae = dec($("aliTrae").value);
+  if (trae) { it.porPaquete = trae; it.pieza = $("aliPieza").value || "porciones"; if (it.pieza === "porciones" && (it.rol === "base" || it.rol === "proteina")) it.rinde = trae; }
+  it = Despensa.trasCorreccion(previo, it);
   var btn = $("aliBtn"); btn.disabled = true;
   guardarAlimento(it).then(function () { limpiarForm(); msg.textContent = "Guardado: " + nombre + "."; A.render(); })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
 });
 $("aliCancelar").addEventListener("click", limpiarForm);
 // Si cambia la unidad de un alimento conocido (por ejemplo arroz de libras a kilos), se ajusta cuánto rinde.
-$("aliUnidad").addEventListener("change", function () { var s = Despensa.sugerido($("aliNombre").value); if (!s || editando || !s.rinde) return;
-  $("aliRinde").value = Despensa.cant(s.rinde * (s.unidad === "libras" && this.value === "kilos" ? 2 : 1)); });
+$("aliUnidad").addEventListener("change", function () { rotulos(); var s = Despensa.sugerido($("aliNombre").value); if (!s || editando) return;
+  var f = (s.unidad === "libras" && this.value === "kilos") ? 2 : 1;
+  if (s.rinde) $("aliRinde").value = Despensa.cant(s.rinde * f);
+  if (s.porPaquete) { $("aliTrae").value = Despensa.cant(s.porPaquete * f); rotulos(); } });
 $("aliQuitar").addEventListener("click", function () { var b = this, id = editando; if (!id) return;
   if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "¿Seguro? Quitar"; return; }
   A.eliminar("despensa", id).then(function () { S.despensa = S.despensa.filter(function (x) { return x.id !== id; }); limpiarForm(); A.render(); }).catch(function () {});
@@ -157,12 +182,20 @@ function unidadDeCompra(u) { var sel = $("coUnidad"); u = u || "unidades";
   if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
   sel.value = u; }
 $("coUnidad").innerHTML = Despensa.UNIDADES.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
+var traePara = "";
 function mostrarCompra() { var v = $("coItem").value, it = buscar(v), nuevo = (v === NUEVO || !it);
   $("coNuevoBox").hidden = !nuevo;
-  $("coUniTxt").textContent = nuevo ? "" : "La cantidad va en " + (it.unidad || "unidades") + ", como está en su despensa."; }
+  $("coUniTxt").textContent = nuevo ? "" : "La cantidad va en " + (it.unidad || "unidades") + ", como está en su despensa.";
+  // "Cada bolsa trae 20 tajadas": se puede cambiar en esta compra si el paquete de hoy trae otra cantidad.
+  var sug = nuevo ? Despensa.sugerido($("coNombre").value) : null, P = nuevo ? (sug ? sug.porPaquete * ((sug.unidad === "libras" && $("coUnidad").value === "kilos") ? 2 : 1) : 0) : Despensa.porPaq(it);
+  var u = nuevo ? $("coUnidad").value : it.unidad, pieza = nuevo ? (sug && sug.pieza) : it.pieza, llave = (nuevo ? "n:" + Despensa.clave($("coNombre").value) + u : it.id) + "|" + P;
+  $("coTraeL").hidden = !P;
+  if (P) $("coTraeTxt").textContent = "Cada " + Despensa.unidadTxt(u || "unidades", 1) + " trae (" + (pieza || "porciones") + ")";
+  if (llave !== traePara) { traePara = llave; $("coTrae").value = P ? Despensa.cant(P) : ""; } }
+$("coUnidad").addEventListener("change", mostrarCompra);
 $("coItem").addEventListener("change", mostrarCompra);
 // Al escribir un producto conocido se propone su unidad (pollo en libras, atún en latas…).
-$("coNombre").addEventListener("change", function () { var sug = Despensa.sugerido(this.value); if (sug) unidadDeCompra(sug.unidad); });
+$("coNombre").addEventListener("change", function () { var sug = Despensa.sugerido(this.value); if (sug) unidadDeCompra(sug.unidad); mostrarCompra(); });
 // Deja el formulario listo con un producto (lo usa el botón "Comprar" de la lista del menú).
 function prepararCompra(d) {
   var k = Despensa.clave(d.nombre), it = (S.despensa || []).filter(function (x) { return (x.clave || Despensa.clave(x.nombre)) === k; })[0];
@@ -179,24 +212,30 @@ $("fCompra").addEventListener("submit", function (e) { e.preventDefault();
     var nombre = $("coNombre").value.trim(); if (!nombre) { msg.textContent = "Escriba el nombre del producto."; return; }
     var k = Despensa.clave(nombre); it = (S.despensa || []).filter(function (x) { return (x.clave || Despensa.clave(x.nombre)) === k; })[0];
     if (!it) { var sug = Despensa.sugerido(nombre) || { tipo: "contable", rol: "otro", rinde: 0, minimo: 1, unidad: "unidades" }, u = $("coUnidad").value || "unidades";
-      it = { id: A.nuevoId(), nombre: nombre, clave: k, tipo: sug.tipo, rol: sug.rol, rinde: sug.rinde * (sug.unidad === "libras" && u === "kilos" ? 2 : 1), unidad: u, precio: 0, cantidad: 0, minimo: sug.tipo === "nivel" ? 0 : sug.minimo };
+      var f = (sug.unidad === "libras" && u === "kilos") ? 2 : 1;
+      it = { id: A.nuevoId(), nombre: nombre, clave: k, tipo: sug.tipo, rol: sug.rol, rinde: sug.rinde * f, unidad: u, precio: 0, cantidad: 0, minimo: sug.tipo === "nivel" ? 0 : sug.minimo };
+      if (sug.porPaquete) { it.porPaquete = sug.porPaquete * f; it.pieza = sug.pieza || "porciones"; }
       if (sug.tipo === "nivel") it.nivel = 0; }
   }
   if (!cantidad) { msg.textContent = "Escriba cuánto compró."; return; }
   if (!valor) { msg.textContent = "Escriba cuánto pagó. Una compra siempre se descuenta de la quincena; si es algo que ya tenía, agréguelo en la pestaña Despensa."; return; }
-  var c = Object.assign({}, it);
+  var c = Object.assign({}, it), traeAntes = Despensa.porPaq(it), trae = traeAntes ? (dec($("coTrae").value) || traeAntes) : 0, tenia = it.cantidad;
+  if (trae && trae !== traeAntes) { // el paquete de hoy trae otra cantidad: lo que quedaba se conserva en piezas
+    c.porPaquete = trae; if (it.tipo !== "nivel") tenia = Despensa.piezas(it) / trae;
+    if ((it.pieza || "porciones") === "porciones" && (it.rol === "base" || it.rol === "proteina")) c.rinde = trae; }
   if (it.tipo === "nivel") { // las unidades nuevas llegan llenas; la que estaba en uso sigue como estaba
     cantidad = Math.max(1, Math.round(cantidad)); var p = Despensa.partes(it);
-    c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel;
-  } else c.cantidad = Math.round((it.cantidad + cantidad) * 100) / 100;
+    c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel; if (p.unidades === 0) delete c.fino;
+  } else c.cantidad = Math.round((tenia + cantidad) * 10000) / 10000;
   c.precio = Math.round(valor / cantidad);
+  c = Despensa.trasCompra(c, cantidad);
   var btn = $("coBtn"), esNuevo = !buscar(it.id), frase = ""; btn.disabled = true;
   guardarAlimento(c).then(function () { return window.MQ.alComprar ? window.MQ.alComprar(it.nombre, cantidad, it.unidad) : null; })
     .then(function (r) { frase = (r && r.frase) || "";
       // El gasto guarda los datos de la compra: con eso se puede deshacer completa (plata, despensa y lista del menú).
       return A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor,
-        compra: { itemId: c.id, nombre: it.nombre, cantidad: cantidad, unidad: it.unidad || "unidades", precio: c.precio, precioAntes: it.precio || 0, nuevo: esNuevo, lista: (r && r.sumado) || 0 } }); })
-    .then(function () { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = "";
+        compra: { itemId: c.id, nombre: it.nombre, cantidad: cantidad, unidad: it.unidad || "unidades", precio: c.precio, precioAntes: it.precio || 0, nuevo: esNuevo, lista: (r && r.sumado) || 0, trae: trae, traeAntes: traeAntes } }); })
+    .then(function () { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = ""; traePara = "";
       msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + " y se descontaron " + money(valor) + " de la quincena." + frase;
       A.render(); $("coItem").value = c.id; mostrarCompra(); })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
@@ -210,8 +249,12 @@ function revertirCompra(g) {
   if (it) {
     var x = Object.assign({}, it);
     if (it.tipo === "nivel") { var p = Despensa.partes(it), u = Math.max(0, p.unidades - Math.round(c.cantidad)); x.cantidad = u; x.nivel = u > 0 ? p.nivel : 0; }
-    else x.cantidad = Math.max(0, Math.round((it.cantidad - c.cantidad) * 100) / 100);
+    else if (c.trae && c.traeAntes && c.trae !== c.traeAntes && it.porPaquete === c.trae) { // la compra había cambiado cuánto trae el paquete: se devuelve
+      x.porPaquete = c.traeAntes; x.cantidad = Math.max(0, Math.round((Despensa.piezas(it) - c.cantidad * c.trae) / c.traeAntes * 10000) / 10000);
+      if ((it.pieza || "porciones") === "porciones" && (it.rol === "base" || it.rol === "proteina")) x.rinde = c.traeAntes; }
+    else x.cantidad = Math.max(0, Math.round((it.cantidad - c.cantidad) * 10000) / 10000);
     if (it.precio === c.precio) x.precio = c.precioAntes || 0; // solo si nadie cambió el precio después
+    x = Despensa.trasCorreccion(null, x); // el seguimiento de cuánto rinde empieza de nuevo
     // Un producto que nació con esta compra y queda en cero se quita de la despensa.
     if (c.nuevo && !x.cantidad) tareas.push(A.eliminar("despensa", it.id).then(function () { S.despensa = S.despensa.filter(function (y) { return y.id !== it.id; }); }));
     else tareas.push(guardarAlimento(x));
@@ -230,7 +273,11 @@ function renderHechas() {
 
 /* ---------- botones de la lista y de las recetas ---------- */
 document.addEventListener("click", function (e) {
-  var b = e.target.closest("[data-mas],[data-menos],[data-editar],[data-cocinar],[data-deshacer]"); if (!b) return;
+  var b = e.target.closest("[data-mas],[data-menos],[data-editar],[data-cocinar],[data-deshacer],[data-rinde-si],[data-rinde-no]"); if (!b) return;
+  if (b.dataset.rindeSi || b.dataset.rindeNo) { // aceptar o no lo que la app aprendió de cuánto rinde una bolsa
+    var ali = buscar(b.dataset.rindeSi || b.dataset.rindeNo); if (!ali) return; var n2 = Object.assign({}, ali);
+    if (b.dataset.rindeSi) { n2.porPaquete = ali.rindeSug; if (ali.rol === "base" || ali.rol === "proteina") n2.rinde = ali.rindeSug; }
+    delete n2.rindeSug; guardarAlimento(n2).then(A.render).catch(function () {}); return; }
   if (b.dataset.deshacer) { // pide confirmación en el mismo botón
     if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "¿Seguro? Deshacer"; setTimeout(function () { b.classList.remove("sure"); b.textContent = "Deshacer"; }, 3500); return; }
     var g = (S.gastos || []).filter(function (x) { return x.id === b.dataset.deshacer; })[0]; if (!g) return; b.disabled = true;
@@ -244,8 +291,8 @@ document.addEventListener("click", function (e) {
   else if (b.dataset.editar) { var it = buscar(b.dataset.editar); if (it) cargarForm(it); }
   else if (b.dataset.cocinar) {
     var rec = propias().concat(Despensa.RECETAS).filter(function (r) { return r.nombre === b.dataset.cocinar; })[0]; if (!rec) return;
-    b.disabled = true;
-    Promise.all(Despensa.cocinar(S.despensa, rec).map(guardarAlimento)).then(function () { $("cRecMsg").textContent = "Descontado de la despensa: " + rec.nombre + "."; A.render(); }).catch(function () { b.disabled = false; });
+    var sv = b.parentNode.querySelector("select[data-veces]"), veces = sv ? parseInt(sv.value, 10) || 1 : 1; b.disabled = true;
+    Promise.all(Despensa.cocinar(S.despensa, rec, veces).map(guardarAlimento)).then(function () { $("cRecMsg").textContent = "Descontado de la despensa: " + rec.nombre + (veces > 1 ? " (" + veces + " porciones)." : "."); A.render(); }).catch(function () { b.disabled = false; });
   }
 });
 A.segmento("cMomento", function (v) { momento = v; render(); });
@@ -259,7 +306,10 @@ $("notaDespensa").addEventListener("click", function () { A.irA("despensa"); });
 function lineasDespensa() {
   var items = (S.despensa || []).slice().sort(porNombre); if (!items.length) return [];
   var r = Despensa.resumen(items, 3), L = ["", "MI DESPENSA (lo que tengo en la cocina)"];
-  items.forEach(function (it) { L.push("- " + it.nombre + ": " + Despensa.textoCantidad(it) + (Despensa.enAlerta(it) ? " (se está acabando)" : "") + (it.precio ? ", precio aproximado " + money(it.precio) + " c/u" : "")); });
+  items.forEach(function (it) { var P = Despensa.porPaq(it), u = Despensa.unidadTxt(it.unidad || "unidades", 1);
+    L.push("- " + it.nombre + ": " + Despensa.textoCantidad(it) + (Despensa.enAlerta(it) ? " (se está acabando)" : "") +
+      (P ? "; cada " + u + " trae " + Despensa.cant(P) + " " + Despensa.nombrePieza(it, P) : "") +
+      (it.precio ? (P ? " y cuesta unos " + money(it.precio) : ", precio aproximado " + money(it.precio) + " c/u") : "")); });
   L.push("Estimado de la app: me alcanza para unas " + r.comidas + " comidas completas, cerca de " + Despensa.cant(diasQueDura(r.comidas)) + " día(s).");
   L.push(almuerzosFuera() ? "Esta semana almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s)") + ", así que esos almuerzos no salen de la despensa. Hay semanas en que almuerzo fuera y otras en que no."
     : "Esta semana almuerzo en casa todos los días.");
@@ -281,14 +331,14 @@ $("cCopiar").addEventListener("click", function () {
     "2) Al final, un bloque de código con un JSON como el de abajo. Lo voy a pegar en mi app para guardar el menú y las recetas, así que no cambies los nombres de los campos:",
     "",
     '{"menu":[{"fecha":"' + hoy + '","desayuno":"nombre de la receta","almuerzo":"nombre de la receta o fuera","comida":"nombre de la receta"}],',
-    ' "recetas":[{"nombre":"Arroz con huevo","momentos":["almuerzo","comida"],"ingredientes":[{"alimento":"Arroz","cantidad":0.2,"unidad":"libras","texto":"1 taza de arroz"},{"alimento":"Huevos","cantidad":2,"unidad":"unidades","texto":"2 huevos"}],"pasos":["Cocine el arroz.","Fría los huevos y sírvalos encima."]}],',
+    ' "recetas":[{"nombre":"Arroz con huevo","momentos":["almuerzo","comida"],"ingredientes":[{"alimento":"Arroz","cantidad":1,"unidad":"porciones","texto":"1 taza de arroz"},{"alimento":"Huevos","cantidad":2,"unidad":"unidades","texto":"2 huevos"}],"pasos":["Cocine el arroz.","Fría los huevos y sírvalos encima."]}],',
     ' "compras":[{"alimento":"Pollo","cantidad":1,"unidad":"libras","precio":9000}]}',
     "",
     "Reglas del JSON:",
     "- \"menu\": un elemento por día, con la fecha en formato AAAA-MM-DD. Cada nombre que uses ahí debe estar en \"recetas\" escrito igual.",
-    "- \"recetas\": cada una para una porción. En \"alimento\" usa el mismo nombre con que aparece en mi despensa cuando sea ese alimento, y en \"cantidad\" y \"unidad\" usa la misma unidad de mi despensa (si tengo el arroz en libras, cuánto de una libra se gasta). \"texto\" es la cantidad dicha de forma casera. Sal, aceite, agua y condimentos van con cantidad 0.",
+    "- \"recetas\": cada una para una porción. En \"alimento\" usa el mismo nombre con que aparece en mi despensa cuando sea ese alimento, y en \"cantidad\" y \"unidad\" usa la unidad en que te lo listé: si dice porciones, tajadas o muslos, en eso (1 porción de arroz, 2 tajadas de pan); si dice libras o unidades, en eso. \"texto\" es la cantidad dicha de forma casera. Sal, aceite, agua y condimentos van con cantidad 0.",
     "- \"pasos\": frases cortas, una por paso.",
-    "- \"compras\": lo que debo comprar para cumplir el menú; \"precio\" es el costo total aproximado de esa compra en pesos, sin puntos.");
+    "- \"compras\": lo que debo comprar para cumplir el menú, en la unidad en que se compra (bolsas, paquetes, libras, unidades); \"precio\" es el costo total aproximado de esa compra en pesos, sin puntos.");
   txt = txt.join("\n"); ta.value = txt;
   var listo = function () { msg.textContent = "Copiado. Ahora péguelo en un chat con Claude."; };
   var manual = function () { ta.hidden = false; ta.focus(); ta.select(); msg.textContent = "Mantenga presionado el texto y elija Copiar."; };

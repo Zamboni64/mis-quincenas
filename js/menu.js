@@ -51,7 +51,7 @@ function render() {
     var falta = Despensa.estadoIngredientes(r, S.despensa || []).filter(function (g) { return g.estado !== "ok"; }).length;
     h += '<p>' + (hecho ? "Ya la preparó." : (falta ? "Le falta " + falta + (falta === 1 ? " ingrediente." : " ingredientes.") : "Tiene todo para prepararla.")) + '</p>';
     h += '<details' + (diaSel === hoy && m === momentoAhora() && !hecho ? " open" : "") + '><summary>Ingredientes y preparación</summary>' + detalle(r) + '</details>';
-    if (!hecho) h += '<button class="ghost" type="button" data-menu-hecho="' + m + '">La preparé: descontar</button>';
+    if (!hecho) h += window.MQ.selPorciones() + '<button class="ghost" type="button" data-menu-hecho="' + m + '">La preparé: descontar</button></div>';
     return h + '</div>'; }).join("");
   // resumen del menú guardado
   $("mGuardado").hidden = !lista.length;
@@ -166,7 +166,8 @@ document.addEventListener("click", function (e) {
   var m = b.dataset.menuHecho, d = diaDe(diaSel); if (!d || !d[m]) return;
   var r = recetaDe(d[m]); b.disabled = true;
   var interna = r ? (r.fija || Despensa.interna(r, S.despensa || [])) : null;
-  var cambios = interna ? Despensa.cocinar(S.despensa || [], interna) : [];
+  var sv = b.parentNode.querySelector("select[data-veces]"), veces = sv ? parseInt(sv.value, 10) || 1 : 1; // el día que hay visita se gastan más porciones
+  var cambios = interna ? Despensa.cocinar(S.despensa || [], interna, veces) : [];
   var dia = Object.assign({}, d); dia.hechos = Object.assign({}, d.hechos || {}); dia.hechos[m] = true;
   Promise.all(cambios.map(function (c) { return A.guardar("despensa", c).then(function () { ponerEn(S.despensa, c); }); }))
     .then(function () { return A.guardar("menu", dia); }).then(function () { ponerEn(S.menu, dia); A.render(); }).catch(function () { b.disabled = false; });
