@@ -27,7 +27,7 @@ var Despensa = (function () {
     "leche": ["litros", "otro", 0, 1, "", 4, "porciones"], "chocolate": ["pastillas", "otro", 0, 2], "panela": ["unidades", "otro", 0, 1],
     "sal": ["bolsas", "otro", 0, 1, "nivel"], "azucar": ["bolsas", "otro", 0, 1, "nivel"], "aceite": ["botellas", "otro", 0, 1, "nivel"],
     "cafe": ["bolsas", "otro", 0, 1, "nivel"], "mantequilla": ["unidades", "otro", 0, 1, "nivel"], "condimentos": ["frascos", "otro", 0, 1, "nivel"],
-    "salsa de tomate": ["frascos", "otro", 0, 1, "nivel"], "ajo": ["unidades", "otro", 0, 1, "nivel"]
+    "salsa de tomate": ["frascos", "otro", 0, 1, "nivel"], "ajo": ["unidades", "otro", 0, 1, "", 5, "unidades"], "ajo en polvo": ["frascos", "otro", 0, 1, "nivel"]
   };
   // De qué puede traer piezas un paquete o una bolsa.
   var PIEZAS = ["porciones", "unidades", "tajadas", "piezas", "muslos", "presas", "filetes"];
@@ -36,7 +36,7 @@ var Despensa = (function () {
   // Otras formas de escribir el mismo alimento.
   var ALIAS = { "huevo": "huevos", "arepa": "arepas", "pan": "pan tajado", "papas": "papa", "tomates": "tomate", "cebollas": "cebolla", "zanahorias": "zanahoria",
     "platanos": "platano", "bananos": "banano", "limones": "limon", "aguacates": "aguacate", "salchicha": "salchichas", "frijol": "frijoles", "lenteja": "lentejas",
-    "espagueti": "pasta", "espaguetis": "pasta", "spaghetti": "pasta", "tocino": "tocineta", "chorizos": "chorizo", "carne": "carne de res", "pechuga": "pollo", "avena en hojuelas": "avena" };
+    "ajos": "ajo", "espagueti": "pasta", "espaguetis": "pasta", "spaghetti": "pasta", "tocino": "tocineta", "chorizos": "chorizo", "carne": "carne de res", "pechuga": "pollo", "avena en hojuelas": "avena" };
   var FRACCION = [0, 0.25, 0.5, 1]; // cuánto de una unidad queda en cada nivel
   var NOMBRES = { "atun": "Atún", "jamon": "Jamón", "platano": "Plátano", "limon": "Limón", "azucar": "Azúcar", "cafe": "Café" };
   var NIVELES = ["Se acabó", "Poco", "Medio", "Lleno"];
@@ -297,6 +297,7 @@ var Despensa = (function () {
   function enUnidades(g, it) {
     var c = n(g.cantidad), u = unidadBase(g.unidad); if (!c) return 0;
     if (porPaq(it) && u === unidadBase(it.pieza || "porciones")) return c / porPaq(it);
+    if (porPaq(it) && u === "diente" && (it.clave || clave(it.nombre)) === "ajo") return c / porPaq(it); // una receta que pida "2 dientes de ajo"
     if (u === unidadBase(it.unidad || "unidades")) return c;
     return null;
   }
