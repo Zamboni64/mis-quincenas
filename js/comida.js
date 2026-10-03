@@ -21,6 +21,8 @@ var editando = null, tipo = "contable", avisoGuardado = false, ultimoSugerido = 
 function dec(v) { var x = parseFloat(String(v).replace(",", ".")); return isNaN(x) || x < 0 ? 0 : Math.round(x * 100) / 100; }
 function saldoQuincena() { var e = A.estadoQ(A.quincenaDe(A.hoyISO())); return e ? e.saldo : null; }
 function porNombre(a, b) { return a.nombre.localeCompare(b.nombre); }
+// Las recetas guardadas (las que vienen de Claude), en el formato del recetario. Las que no tienen ingredientes reconocibles no se sugieren.
+function propias() { return (S.recetas || []).map(function (r) { return Despensa.interna(r, S.despensa || []); }).filter(function (r) { return Object.keys(r.ing).length; }); }
 
 /* ---------- dibujar ---------- */
 function render() {
@@ -45,18 +47,19 @@ function render() {
   var R = $("cRecetas");
   if (!items.length) R.innerHTML = '<div class="empty">Agregue alimentos a la despensa para ver recetas.</div>';
   else {
-    var x = Despensa.recetas(items, momento), html = "";
+    var x = Despensa.recetas(items, momento, propias()), html = "";
     if (x.listas.length) html += '<div class="subt">Con lo que tiene</div>' + x.listas.map(function (a) {
-      return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>' + esc(a.receta.como) + ' Le alcanza para ' + a.veces + (a.veces === 1 ? ' vez.' : ' veces.') + '</p>' +
+      var como = a.receta.propia && a.receta.como.length > 170 ? a.receta.como.slice(0, 170) + "… (completa en Mis recetas)" : a.receta.como;
+      return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>' + esc(como) + (isFinite(a.veces) ? ' Le alcanza para ' + a.veces + (a.veces === 1 ? ' vez.' : ' veces.') : '') + '</p>' +
         '<button class="ghost" type="button" data-cocinar="' + esc(a.receta.nombre) + '">La preparé: descontar</button></div>'; }).join("");
     else html += '<div class="empty">Con lo que tiene no sale ninguna receta del recetario para este momento.</div>';
     if (x.casi.length) html += '<div class="subt">Comprando una o dos cosas</div>' + x.casi.slice(0, 5).map(function (a) {
       var costo = 0, sin = false; a.faltan.forEach(function (f) { if (f.precio) costo += f.precio * Math.max(1, Math.ceil(f.necesita - f.tiene)); else sin = true; });
       var precio = sin ? "" : " Comprarlo cuesta unos " + money(costo) + (saldo != null ? (costo <= saldo ? ", y le alcanza." : ", y no le alcanza con lo que queda de la quincena.") : ".");
       return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>Le falta: ' + esc(a.faltan.map(function (f) { return f.nombre.toLowerCase(); }).join(" y ")) + '.' + esc(precio) + '</p></div>'; }).join("");
-    var sin = Despensa.sinReceta(items);
-    if (sin.length) html += '<p class="small muted" style="margin-top:10px">El recetario de la app no tiene recetas con: ' + esc(sin.map(function (i) { return i.nombre.toLowerCase(); }).join(", ")) +
-      '. Para recetas con eso, use «Copiar despensa y presupuesto», más abajo, y pregúntele a Claude.</p>';
+    var sin = Despensa.sinReceta(items, propias());
+    if (sin.length) html += '<p class="small muted" style="margin-top:10px">Aún no hay recetas con: ' + esc(sin.map(function (i) { return i.nombre.toLowerCase(); }).join(", ")) +
+      '. Pídale el menú a Claude desde la pestaña Menú y las recetas que le dé quedan guardadas aquí.</p>';
     R.innerHTML = html;
   }
   // lista de la despensa: primero lo que se está acabando
@@ -167,7 +170,7 @@ document.addEventListener("click", function (e) {
   else if (b.dataset.menos) ajustar(b.dataset.menos, -1);
   else if (b.dataset.editar) { var it = buscar(b.dataset.editar); if (it) cargarForm(it); }
   else if (b.dataset.cocinar) {
-    var rec = Despensa.RECETAS.filter(function (r) { return r.nombre === b.dataset.cocinar; })[0]; if (!rec) return;
+    var rec = propias().concat(Despensa.RECETAS).filter(function (r) { return r.nombre === b.dataset.cocinar; })[0]; if (!rec) return;
     b.disabled = true;
     Promise.all(Despensa.cocinar(S.despensa, rec).map(guardarAlimento)).then(function () { $("cRecMsg").textContent = "Descontado de la despensa: " + rec.nombre + "."; A.render(); }).catch(function () { b.disabled = false; });
   }
@@ -194,11 +197,27 @@ $("cCopiar").addEventListener("click", function () {
   var msg = $("cCopMsg"), ta = $("cCopTxt"), L = lineasDespensa();
   if (!L.length) { msg.textContent = "Primero agregue alimentos a la despensa."; return; }
   var hoy = A.hoyISO(), q = A.quincenaDe(hoy), sig = A.siguientePago(q), saldo = saldoQuincena(), faltan = Math.max(1, A.dias(hoy, sig));
-  var txt = ["Vivo solo y cocino para una persona. Hoy es " + A.corto(hoy) + " (pesos colombianos)."].concat(L);
+  var DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"], nDias = Math.min(7, faltan);
+  var txt = ["Vivo solo y cocino para una persona. Hoy es " + DIAS[fechaLocal(hoy).getDay()] + " " + A.corto(hoy) + " (" + hoy + "). Los valores van en pesos colombianos."].concat(L);
   if (saldo != null) txt.push("", "MI PRESUPUESTO", "- Me quedan " + money(saldo) + " para comida, transporte y todo lo demás hasta el pago del " + A.corto(sig) + " (" + faltan + " día(s)).");
-  txt.push("", "Con esto, dime: 1) qué puedo cocinar hoy de desayuno, almuerzo y comida usando lo que tengo; 2) qué debería comprar, con cantidades y costo aproximado, para que la comida me alcance hasta el próximo pago sin pasarme del presupuesto; 3) un menú sencillo para esos días.");
+  txt.push("", "LO QUE NECESITO",
+    "Arma mi menú para " + (nDias === 1 ? "hoy" : "los próximos " + nDias + " días, empezando hoy") + " con desayuno, almuerzo y comida. Usa primero lo que ya tengo, que sean recetas sencillas, y que lo que haya que comprar no se pase de mi presupuesto." +
+    (almuerzosFuera() ? " Los días que almuerzo fuera de casa (elige tú cuáles, entre semana), pon el almuerzo como \"fuera\"." : ""),
+    "", "Respóndeme en dos partes:",
+    "1) Un resumen corto para leer: el menú día por día y qué debo comprar, con el costo aproximado.",
+    "2) Al final, un bloque de código con un JSON como el de abajo. Lo voy a pegar en mi app para guardar el menú y las recetas, así que no cambies los nombres de los campos:",
+    "",
+    '{"menu":[{"fecha":"' + hoy + '","desayuno":"nombre de la receta","almuerzo":"nombre de la receta o fuera","comida":"nombre de la receta"}],',
+    ' "recetas":[{"nombre":"Arroz con huevo","momentos":["almuerzo","comida"],"ingredientes":[{"alimento":"Arroz","cantidad":0.2,"unidad":"libras","texto":"1 taza de arroz"},{"alimento":"Huevos","cantidad":2,"unidad":"unidades","texto":"2 huevos"}],"pasos":["Cocine el arroz.","Fría los huevos y sírvalos encima."]}],',
+    ' "compras":[{"alimento":"Pollo","cantidad":1,"unidad":"libras","precio":9000}]}',
+    "",
+    "Reglas del JSON:",
+    "- \"menu\": un elemento por día, con la fecha en formato AAAA-MM-DD. Cada nombre que uses ahí debe estar en \"recetas\" escrito igual.",
+    "- \"recetas\": cada una para una porción. En \"alimento\" usa el mismo nombre con que aparece en mi despensa cuando sea ese alimento, y en \"cantidad\" y \"unidad\" usa la misma unidad de mi despensa (si tengo el arroz en libras, cuánto de una libra se gasta). \"texto\" es la cantidad dicha de forma casera. Sal, aceite, agua y condimentos van con cantidad 0.",
+    "- \"pasos\": frases cortas, una por paso.",
+    "- \"compras\": lo que debo comprar para cumplir el menú; \"precio\" es el costo total aproximado de esa compra en pesos, sin puntos.");
   txt = txt.join("\n"); ta.value = txt;
-  var listo = function () { msg.textContent = "Copiado. Péguelo en un chat con Claude."; };
+  var listo = function () { msg.textContent = "Copiado. Ahora péguelo en un chat con Claude."; };
   var manual = function () { ta.hidden = false; ta.focus(); ta.select(); msg.textContent = "Mantenga presionado el texto y elija Copiar."; };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(listo, manual); else manual();
 });

@@ -5,12 +5,12 @@
    2. El navegador nota que este archivo cambió, descarga TODOS los archivos de nuevo a una caché nueva
       y, cuando termina, reemplaza la anterior de un solo golpe. Así nunca quedan mezclados archivos viejos y nuevos.
    3. La app abierta se recarga sola una vez para mostrar la versión nueva. */
-const VERSION = "3.4";
+const VERSION = "3.5";
 const CACHE = "mis-quincenas-app-" + VERSION;
 const CACHE_FIREBASE = "mis-quincenas-firebase"; // librerías de Firebase: no cambian, se conservan entre versiones
 const ARCHIVOS = [
   "./", "index.html", "css/estilos.css",
-  "js/motor.js", "js/despensa.js", "js/almacen.js", "js/app.js", "js/comida.js", "js/firebase-config.js", "js/nube.js",
+  "js/motor.js", "js/despensa.js", "js/almacen.js", "js/app.js", "js/comida.js", "js/menu.js", "js/firebase-config.js", "js/nube.js",
   "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"
 ];

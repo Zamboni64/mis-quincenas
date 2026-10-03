@@ -123,3 +123,13 @@ input::-webkit-date-and-time-value{text-align:left;margin:0}
 #hoyTxt{white-space:nowrap;flex:none}
 #navComidas .badge{top:0;right:0}
 @media (max-width:359px){.apps{gap:10px}.apps button{font-size:16px}#hoyTxt{display:none}}
+/* Menú y recetas guardadas */
+ol.pasos{margin:8px 0;padding-left:22px;font-size:14px}
+ol.pasos li{margin:4px 0}
+ul.ings{list-style:none;margin:6px 0;padding:0;font-size:14px}
+ul.ings li{padding:3px 0 3px 18px;position:relative}
+ul.ings li::before{content:"\2713";position:absolute;left:0;color:var(--ok)}
+ul.ings li.falta{color:var(--bad)}
+ul.ings li.falta::before{content:"\2717";color:var(--bad)}
+.receta details{border-top:0;padding:2px 0 6px}
+#mPegar{font:inherit;font-size:16px;min-height:110px;padding:10px 12px}

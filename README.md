@@ -8,13 +8,14 @@ No usa frameworks ni herramientas de compilación: es HTML, CSS y JavaScript pur
 
 | Archivo | Qué hace |
 |---|---|
-| `index.html` | La página, con sus dos secciones: Mis Quincenas (pestañas Hoy, Pagos, Ingresos, Plan, Más) y Mis comidas (Despensa, Recetas, Compras). |
+| `index.html` | La página, con sus dos secciones: Mis Quincenas (pestañas Hoy, Pagos, Ingresos, Plan, Más) y Mis comidas (Menú, Despensa, Recetas, Compras). |
 | `css/estilos.css` | Colores, tamaños y distribución. Tiene tema claro y oscuro. |
 | `js/motor.js` | Los cálculos: quincenas, plan de deudas, reparto de ingresos, pagos y el generador del Excel. No toca la pantalla. |
 | `js/almacen.js` | Guarda y lee los datos en el teléfono (IndexedDB). |
 | `js/app.js` | La interfaz: dibuja las pantallas y responde a los botones. |
 | `js/despensa.js` | Los cálculos de la despensa: catálogo de alimentos, recetario, estimado de comidas y lista de compras. No toca la pantalla. |
-| `js/comida.js` | Las pantallas de la sección Mis comidas. |
+| `js/comida.js` | Las pantallas de Despensa, Recetas y Compras. |
+| `js/menu.js` | La pestaña Menú: guarda el menú y las recetas que responde Claude y muestra el menú de cada día. |
 | `js/nube.js` | Sincronización con Firebase: inicio de sesión y copia de los cambios entre dispositivos. |
 | `js/firebase-config.js` | Identificadores del proyecto de Firebase. No son secretos. |
 | `sw.js` | *Service worker*: guarda los archivos para que la app abra sin internet. |
@@ -119,7 +120,7 @@ En la pestaña **Pagos**, "Crear recordatorios" genera un archivo `.ics` con los
 
 ## Mis comidas
 
-Arriba, junto al título, se elige la sección: **Mis Quincenas** o **Mis comidas**. Cada una tiene su propia barra de pestañas abajo. Mis comidas tiene tres: Despensa, Recetas y Compras.
+Arriba, junto al título, se elige la sección: **Mis Quincenas** o **Mis comidas**. Cada una tiene su propia barra de pestañas abajo. Mis comidas tiene cuatro: Menú, Despensa, Recetas y Compras.
 
 Lleva el inventario de la cocina en unidades simples (huevos por unidad, arroz por libras, atún por latas); la unidad se elige de una lista. Lo que no se cuenta exacto se lleva por nivel: cuántas hay y si la que está en uso está llena, por la mitad o con poco. Dos bolsas de arroz, una llena y otra por la mitad, cuentan como 1,5 bolsas.
 
@@ -128,7 +129,9 @@ Lleva el inventario de la cocina en unidades simples (huevos por unidad, arroz p
 - **Qué puedo cocinar**: recetas del recetario (en `js/despensa.js`, lista `RECETAS`) que salen con lo que hay, y las que quedan a uno o dos ingredientes. "La preparé" descuenta los ingredientes.
 - **Registrar una compra**: suma a la despensa, guarda el precio por unidad y anota el gasto en la categoría Mercado.
 - **Lista de compras**: lo que está por debajo del mínimo, con el costo estimado y si cabe en lo que queda de la quincena.
-- **Preguntarle a Claude**: copia la despensa y el presupuesto para pegarlos en un chat.
+- **Menú con Claude**: en la pestaña Menú, "Copiar despensa y presupuesto" arma la pregunta. Claude responde con el menú por días y un bloque JSON al final; ese bloque se pega en la app, que guarda cada receta (ingredientes y pasos) en "Mis recetas", el menú de cada día y la lista de lo que hay que comprar. La pestaña Menú abre en el día de hoy; "La preparé" descuenta los ingredientes de la despensa.
+
+El bloque que entiende la app tiene tres listas: `menu` (un elemento por fecha, con `desayuno`, `almuerzo` y `comida`), `recetas` (`nombre`, `momentos`, `ingredientes` con `alimento`, `cantidad`, `unidad` y `texto`, y `pasos`) y `compras` (`alimento`, `cantidad`, `unidad`, `precio`).
 
 Para agregar una receta, añada un renglón a `RECETAS` con cantidades para una porción, en la unidad del catálogo.
 

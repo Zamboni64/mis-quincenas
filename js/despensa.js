@@ -131,15 +131,18 @@ var Despensa = (function () {
   function indice(items) { var o = {}; items.forEach(function (it) { o[it.clave || clave(it.nombre)] = it; }); return o; }
 
   /* Recetas de un momento del día: las que se pueden hacer ya y las que quedan a uno o dos ingredientes. */
-  function recetas(items, momento) {
-    var idx = indice(items), listas = [], casi = [];
-    RECETAS.forEach(function (r) {
+  /* `propias` son las recetas guardadas por el usuario, ya pasadas por interna(). Si una se llama igual que una del recetario, gana la del usuario.
+     En una receta propia, un ingrediente con cantidad 0 solo pide que haya algo de ese alimento. */
+  function recetas(items, momento, propias) {
+    var idx = indice(items), listas = [], casi = [], mias = {};
+    (propias || []).forEach(function (r) { mias[clave(r.nombre)] = true; });
+    RECETAS.filter(function (r) { return !mias[clave(r.nombre)]; }).concat(propias || []).forEach(function (r) {
       if (r.momentos.indexOf(momento) < 0) return;
       var faltan = [], veces = Infinity;
       Object.keys(r.ing).forEach(function (k) {
-        var it = idx[k], necesita = r.ing[k], tiene = it ? equivalente(it) * factor(it) : 0;
-        if (tiene < necesita) faltan.push({ clave: k, nombre: nombreBonito(k), necesita: necesita, tiene: tiene, precio: it ? n(it.precio) : 0, unidad: (CATALOGO[k] || [""])[0] });
-        else veces = Math.min(veces, Math.floor(tiene / necesita));
+        var it = idx[k], necesita = r.ing[k], tiene = it ? equivalente(it) * (r.propia ? 1 : factor(it)) : 0;
+        if (tiene < necesita || tiene <= 0) faltan.push({ clave: k, nombre: (r.nombres && r.nombres[k]) || nombreBonito(k), necesita: necesita, tiene: tiene, precio: it ? n(it.precio) : 0, unidad: (CATALOGO[k] || [""])[0] });
+        else if (necesita > 0) veces = Math.min(veces, Math.floor(tiene / necesita));
       });
       if (!faltan.length) listas.push({ receta: r, veces: veces });
       else if (faltan.length <= 2) casi.push({ receta: r, faltan: faltan });
@@ -152,8 +155,8 @@ var Despensa = (function () {
   // Los de nivel no se descuentan: su nivel se ajusta a ojo con los botones − y +.
   function cocinar(items, receta) {
     var idx = indice(items), cambios = [];
-    Object.keys(receta.ing).forEach(function (k) { var it = idx[k]; if (!it || it.tipo === "nivel") return;
-      var c = Object.assign({}, it); c.cantidad = Math.max(0, Math.round((n(it.cantidad) - receta.ing[k] / factor(it)) * 100) / 100); cambios.push(c); });
+    Object.keys(receta.ing).forEach(function (k) { var it = idx[k]; if (!it || it.tipo === "nivel" || !receta.ing[k]) return;
+      var c = Object.assign({}, it); c.cantidad = Math.max(0, Math.round((n(it.cantidad) - receta.ing[k] / (receta.propia ? 1 : factor(it))) * 100) / 100); cambios.push(c); });
     return cambios;
   }
 
@@ -168,12 +171,88 @@ var Despensa = (function () {
   }
 
   // Alimentos de la despensa que el recetario no usa en ninguna receta (por ejemplo, uno escrito con un nombre que no conoce).
-  function sinReceta(items) {
-    var usados = {}; RECETAS.forEach(function (r) { Object.keys(r.ing).forEach(function (k) { usados[k] = true; }); });
+  function sinReceta(items, propias) {
+    var usados = {}; RECETAS.concat(propias || []).forEach(function (r) { Object.keys(r.ing).forEach(function (k) { usados[k] = true; }); });
     return items.filter(function (it) { var k = it.clave || clave(it.nombre), c = CATALOGO[k]; return !usados[k] && (!c || c[1] !== "otro"); });
   }
 
-  return { UNIDADES: UNIDADES, partes: partes, equivalente: equivalente, ajustarNivel: ajustarNivel, textoUnidades: textoUnidades, textoNivel: textoNivel, sinReceta: sinReceta,
+  /* ---------- Recetas y menú que vienen de Claude ----------
+     La app arma una pregunta, Claude responde con un bloque JSON y aquí se lee y se limpia ese bloque. */
+  var MOMENTOS = ["desayuno", "almuerzo", "comida"];
+  function texto(v, max) { return String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, max); }
+  function numero(v) { var x = typeof v === "number" ? v : parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(x) && x > 0 ? Math.round(x * 1000) / 1000 : 0; }
+  function momentoDe(v) { var k = clave(v); return k === "cena" ? "comida" : (MOMENTOS.indexOf(k) >= 0 ? k : ""); }
+  function leerJSON(t) {
+    var a = t.indexOf("{"), b = t.lastIndexOf("}"); if (a < 0 || b <= a) throw new Error("json");
+    return JSON.parse(t.slice(a, b + 1));
+  }
+  function leerMenu(pegado) {
+    var t = String(pegado || ""), o;
+    try { o = leerJSON(t); } // si falla, se intenta de nuevo cambiando las comillas curvas y los espacios raros que a veces mete el copiado
+    catch (e) { try { o = leerJSON(t.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/\u00A0/g, " ")); } catch (e2) { throw new Error("json"); } }
+    if (!o || typeof o !== "object") throw new Error("json");
+    var recs = [], vistos = {};
+    (Array.isArray(o.recetas) ? o.recetas : []).slice(0, 60).forEach(function (r) {
+      if (!r || typeof r !== "object") return; var nombre = texto(r.nombre, 70); if (!nombre || vistos[clave(nombre)]) return; vistos[clave(nombre)] = true;
+      var moms = []; (Array.isArray(r.momentos) ? r.momentos : [r.momentos]).forEach(function (m) { m = momentoDe(m); if (m && moms.indexOf(m) < 0) moms.push(m); });
+      var ings = (Array.isArray(r.ingredientes) ? r.ingredientes : []).slice(0, 25).map(function (g) {
+        if (typeof g === "string") g = { alimento: g, texto: g };
+        if (!g || typeof g !== "object") return null; var ali = texto(g.alimento, 40); if (!ali) return null;
+        var c = numero(g.cantidad), u = texto(g.unidad, 14);
+        return { alimento: ali, clave: clave(ali), cantidad: c, unidad: u, texto: texto(g.texto, 80) || ((c ? cant(c) + " " + (u ? unidadTxt(u, c) + " de " : "") : "") + ali.toLowerCase()) };
+      }).filter(Boolean);
+      var pasos = Array.isArray(r.pasos) ? r.pasos : [r.pasos || r.preparacion || r.como];
+      pasos = pasos.map(function (p) { return texto(p, 400); }).filter(Boolean).slice(0, 15);
+      recs.push({ nombre: nombre, clave: clave(nombre), momentos: moms, ingredientes: ings, pasos: pasos });
+    });
+    var dias = [], fechas = {};
+    (Array.isArray(o.menu) ? o.menu : []).slice(0, 31).forEach(function (d) {
+      if (!d || typeof d !== "object") return; var f = texto(d.fecha, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || fechas[f]) return; fechas[f] = true;
+      var dia = { fecha: f }; MOMENTOS.forEach(function (m) { var v = texto(m === "comida" ? (d.comida != null ? d.comida : d.cena) : d[m], 70); dia[m] = clave(v) === "fuera" ? "fuera" : v; });
+      dias.push(dia);
+    });
+    dias.sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; });
+    // Si una receta no dice para qué momento es, se deduce de dónde aparece en el menú.
+    recs.forEach(function (r) { if (r.momentos.length) return; dias.forEach(function (d) { MOMENTOS.forEach(function (m) { if (clave(d[m]) === r.clave && r.momentos.indexOf(m) < 0) r.momentos.push(m); }); }); });
+    var compras = (Array.isArray(o.compras) ? o.compras : []).slice(0, 40).map(function (c) {
+      if (!c || typeof c !== "object") return null; var ali = texto(c.alimento, 40); if (!ali) return null;
+      return { alimento: ali, cantidad: numero(c.cantidad), unidad: texto(c.unidad, 14), precio: Math.round(numero(c.precio)) };
+    }).filter(Boolean);
+    if (!recs.length && !dias.length) throw new Error("vacio");
+    var sin = []; dias.forEach(function (d) { MOMENTOS.forEach(function (m) { var v = d[m]; if (v && v !== "fuera" && !vistos[clave(v)] && sin.indexOf(v) < 0) sin.push(v); }); });
+    return { dias: dias, recetas: recs, compras: compras, sinReceta: sin };
+  }
+  // Compara unidades sin importar singular o plural ("libra" = "libras").
+  function unidadBase(u) { return clave(unidadTxt(clave(u), 1)); }
+  // Convierte una receta guardada al formato del recetario. Si la unidad no coincide con la de la despensa (o el alimento
+  // se lleva por nivel), el ingrediente queda con cantidad 0: se comprueba que haya, pero no se descuenta.
+  function interna(r, items) {
+    var idx = indice(items || []), ing = {}, nombres = {};
+    (r.ingredientes || []).forEach(function (g) { var k = g.clave || clave(g.alimento); if (!k || basico(k, idx)) return; var it = idx[k], c = n(g.cantidad);
+      if (it && (it.tipo === "nivel" || unidadBase(it.unidad) !== unidadBase(g.unidad))) c = 0;
+      ing[k] = (ing[k] || 0) + c; nombres[k] = g.alimento; });
+    return { id: r.id, nombre: r.nombre, momentos: r.momentos || [], ing: ing, nombres: nombres, como: (r.pasos || []).join(" "), propia: true };
+  }
+  // Agua, sal, aceite y demás básicos: si no están anotados en la despensa, no se cuentan como faltantes.
+  function basico(k, idx) { return k === "agua" || (!idx[k] && CATALOGO[k] && CATALOGO[k][4] === "nivel"); }
+  // Para mostrar una receta: cada ingrediente con su estado ("ok", "falta" o "poco").
+  function estadoIngredientes(r, items) {
+    var idx = indice(items || []);
+    return (r.ingredientes || []).map(function (g) { var k = g.clave || clave(g.alimento), it = idx[k], est = "ok";
+      if (basico(k, idx)) est = "ok";
+      else if (!it || equivalente(it) <= 0) est = "falta";
+      else if (n(g.cantidad) > 0 && it.tipo !== "nivel" && unidadBase(it.unidad) === unidadBase(g.unidad) && n(it.cantidad) < n(g.cantidad)) est = "poco";
+      return { texto: g.texto || g.alimento, estado: est }; });
+  }
+  // Una receta del recetario de la app, en el mismo formato que las guardadas (para mostrarla en el menú).
+  function delRecetario(nombre) {
+    var r = RECETAS.filter(function (x) { return clave(x.nombre) === clave(nombre); })[0]; if (!r) return null;
+    return { nombre: r.nombre, clave: clave(r.nombre), momentos: r.momentos, pasos: [r.como], fija: r,
+      ingredientes: Object.keys(r.ing).map(function (k) { var u = (CATALOGO[k] || ["unidades"])[0]; return { alimento: nombreBonito(k), clave: k, cantidad: r.ing[k], unidad: u, texto: cant(r.ing[k]) + " " + unidadTxt(u, r.ing[k]) + " de " + nombreBonito(k).toLowerCase() }; }) };
+  }
+
+  return { MOMENTOS: MOMENTOS, leerMenu: leerMenu, interna: interna, estadoIngredientes: estadoIngredientes, delRecetario: delRecetario,
+    UNIDADES: UNIDADES, partes: partes, equivalente: equivalente, ajustarNivel: ajustarNivel, textoUnidades: textoUnidades, textoNivel: textoNivel, sinReceta: sinReceta,
     catalogo: catalogo, sugerido: sugerido, clave: clave, enAlerta: enAlerta, resumen: resumen, diasQueDura: diasQueDura, recetas: recetas, cocinar: cocinar,
     listaCompras: listaCompras, textoCantidad: textoCantidad, unidadTxt: unidadTxt, cant: cant, NIVELES: NIVELES, RECETAS: RECETAS };
 })();

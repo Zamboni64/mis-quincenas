@@ -6,7 +6,7 @@
    Un registro borrado no se elimina: se marca con `borrado: true`, para que el borrado también viaje a los demás dispositivos. */
 const VERSION_SDK = "10.12.2";
 const BASE = "https://www.gstatic.com/firebasejs/" + VERSION_SDK + "/";
-const TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa"];
+const TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu"];
 const CLAVE_UID = "mq-sync-uid"; // recuerda con qué cuenta ya se enlazó este dispositivo
 
 const estado = { disponible: false, usuario: null, sincronizando: false, ultima: null, error: "" };

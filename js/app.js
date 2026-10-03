@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.4";
+var VERSION_APP = "3.5";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -34,7 +34,7 @@ function anteriorQ(q) { var d = parse(q); return d.getDate() === 25 ? iso(new Da
 function esMovil() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
 
 /* ---------- estado en memoria ---------- */
-var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, despensa: [] };
+var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, despensa: [], recetas: [], menu: [] };
 function recalcular() { S.calc = S.P ? Motor.calcular(S.P, S.ingresos) : null; }
 function filaQ(q) { return S.calc ? S.calc.porFecha[q] : null; }
 function gastosDe(q) { return S.gastos.filter(function (g) { return g.quincena === q; }); }
@@ -203,6 +203,8 @@ function aplicar(todo) { // pasa lo leído del almacén a la memoria
   S.P = cfg && cfg.valores ? cfg.valores : null;
   S.gastos = (todo.gastos || []).filter(vivo);
   S.despensa = (todo.despensa || []).filter(vivo);
+  S.recetas = (todo.recetas || []).filter(vivo);
+  S.menu = (todo.menu || []).filter(vivo);
   S.ingresos = (todo.ingresos || []).filter(vivo).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
   S.hechos = {}; (todo.pagosHechos || []).filter(vivo).forEach(function (x) { S.hechos[x.id] = true; });
   S.ajustes = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) { if (typeof x.libre === "number") S.ajustes[x.id] = x.libre; });
@@ -320,8 +322,8 @@ document.addEventListener("click", function (e) {
 $("alertaPagos").addEventListener("click", function () { irA("pagos"); });
 /* La app tiene dos secciones que se eligen arriba: "Mis Quincenas" (la plata) y "Mis comidas" (la despensa).
    Cada una tiene sus propias pestañas en la barra de abajo. */
-var SECCIONES = { quincenas: ["hoy", "pagos", "ingresos", "plan", "mas"], comidas: ["despensa", "recetas", "compras"] };
-var ultimaPestana = { quincenas: "hoy", comidas: "despensa" };
+var SECCIONES = { quincenas: ["hoy", "pagos", "ingresos", "plan", "mas"], comidas: ["menu", "despensa", "recetas", "compras"] };
+var ultimaPestana = { quincenas: "hoy", comidas: "menu" };
 function irA(tab) {
   var modo = SECCIONES.comidas.indexOf(tab) >= 0 ? "comidas" : "quincenas"; ultimaPestana[modo] = tab;
   SECCIONES.quincenas.concat(SECCIONES.comidas).forEach(function (n) { $("tab-" + n).hidden = (n !== tab);
@@ -333,7 +335,7 @@ function irA(tab) {
 }
 $("apps").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) irA(ultimaPestana[b.dataset.modo]); });
 // Al abrir, vuelve a la sección que estaba usando.
-try { if (localStorage.getItem("mq-seccion") === "comidas") irA("despensa"); } catch (e) {}
+try { if (localStorage.getItem("mq-seccion") === "comidas") irA("menu"); } catch (e) {}
 function cambiarQ(q) { S.q = q; renderHoy(); }
 $("qPrev").addEventListener("click", function () { cambiarQ(anteriorQ(S.q)); });
 $("qNext").addEventListener("click", function () { cambiarQ(siguientePago(S.q)); });
@@ -379,7 +381,7 @@ $("crearCal").addEventListener("click", function () {
 });
 
 /* ---------- respaldo ---------- */
-function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, despensa: S.despensa }; }
+function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, despensa: S.despensa, recetas: S.recetas, menu: S.menu }; }
 $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
   if (!S.P) { msg.textContent = "Aún no hay datos para respaldar."; return; }
   entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1))
@@ -394,7 +396,9 @@ function leerRespaldo(texto) { // valida el archivo y lo convierte al formato de
     ingresos: (r.ingresos || []).filter(function (x) { return x && x.id && x.fecha && typeof x.valor === "number"; }),
     pagosHechos: (r.pagosHechos || []).map(function (id) { return { id: String(id) }; }),
     ajustes: Object.keys(aj).filter(function (k) { return typeof aj[k] === "number"; }).map(function (k) { return { id: k, libre: aj[k] }; }),
-    despensa: (r.despensa || []).filter(function (x) { return x && x.id && x.nombre; }) };
+    despensa: (r.despensa || []).filter(function (x) { return x && x.id && x.nombre; }),
+    recetas: (r.recetas || []).filter(function (x) { return x && x.id && x.nombre; }),
+    menu: (r.menu || []).filter(function (x) { return x && x.id; }) };
 }
 var avisoResp = $("respMsg");
 function pedirArchivo(dondeAvisar) { avisoResp = dondeAvisar; $("archivoResp").value = ""; $("archivoResp").click(); }
@@ -410,14 +414,14 @@ $("archivoResp").addEventListener("change", function () {
   f.text().then(function (t) { var todo = leerRespaldo(t), m = ahora();
     // Cada registro del respaldo queda como el más reciente; lo que hay hoy y no viene en el respaldo se marca como borrado,
     // para que la nube y los demás dispositivos queden igual que el respaldo.
-    ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
+    ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
     var enResp = function (k) { var o = {}; todo[k].forEach(function (x) { o[x.id] = true; }); return o; };
     var g = enResp("gastos"), i = enResp("ingresos"), p = enResp("pagosHechos"), a = enResp("ajustes");
     S.gastos.forEach(function (x) { if (!g[x.id]) todo.gastos.push({ id: x.id, borrado: true, mod: m }); });
     S.ingresos.forEach(function (x) { if (!i[x.id]) todo.ingresos.push({ id: x.id, borrado: true, mod: m }); });
     Object.keys(S.hechos).forEach(function (id) { if (!p[id]) todo.pagosHechos.push({ id: id, borrado: true, mod: m }); });
     Object.keys(S.ajustes).forEach(function (id) { if (!a[id]) todo.ajustes.push({ id: id, borrado: true, mod: m }); });
-    var dsp = enResp("despensa"); S.despensa.forEach(function (x) { if (!dsp[x.id]) todo.despensa.push({ id: x.id, borrado: true, mod: m }); });
+    ["despensa", "recetas", "menu"].forEach(function (k) { var hay = enResp(k); S[k].forEach(function (x) { if (!hay[x.id]) todo[k].push({ id: x.id, borrado: true, mod: m }); }); });
     return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo); marcarRespaldo(); if (window.Nube) Nube.sincronizar();
       todo.gastos = todo.gastos.filter(vivo); todo.ingresos = todo.ingresos.filter(vivo);
     msg.textContent = "Respaldo cargado: " + todo.gastos.length + " gasto(s) y " + todo.ingresos.length + " ingreso(s)."; }); })

@@ -1,0 +1,144 @@
+/* Pestaña "Menú" de Mis comidas, la lista "Mis recetas" y las compras sugeridas.
+   El circuito es: la app arma la pregunta (botón Copiar) → Claude responde con el menú y un bloque JSON →
+   ese bloque se pega aquí → la app guarda las recetas y el menú de cada día, y muestra el de hoy.
+   Lo que se pega se lee y se limpia en despensa.js (Despensa.leerMenu). */
+(function () {
+"use strict";
+var A = window.MQ.app, $ = A.$, esc = A.esc, money = A.money, S = A.S;
+var MOMENTOS = Despensa.MOMENTOS, TITULO = { desayuno: "Desayuno", almuerzo: "Almuerzo", comida: "Comida" };
+var DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+var diaSel = A.hoyISO();
+
+function fechaLocal(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function isoDe(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function sumarDias(s, n) { var d = fechaLocal(s); d.setDate(d.getDate() + n); return isoDe(d); }
+function esFecha(id) { return /^\d{4}-\d{2}-\d{2}$/.test(id); }
+function dias() { return (S.menu || []).filter(function (x) { return esFecha(x.id); }).sort(function (a, b) { return a.id < b.id ? -1 : 1; }); }
+function diaDe(f) { return (S.menu || []).filter(function (x) { return x.id === f; })[0]; }
+function sugeridas() { var x = (S.menu || []).filter(function (d) { return d.id === "compras"; })[0]; return x && Array.isArray(x.lista) ? x.lista : []; }
+function recetaDe(nombre) { var k = Despensa.clave(nombre); return (S.recetas || []).filter(function (r) { return (r.clave || Despensa.clave(r.nombre)) === k; })[0] || Despensa.delRecetario(nombre); }
+function momentoAhora() { var h = new Date().getHours(); return h < 10 ? "desayuno" : (h < 15 ? "almuerzo" : "comida"); }
+function etiqueta(f) { var hoy = A.hoyISO(), t = DIAS[fechaLocal(f).getDay()] + " " + A.corto(f);
+  return f === hoy ? "Hoy, " + t : (f === sumarDias(hoy, 1) ? "Mañana, " + t : t.charAt(0).toUpperCase() + t.slice(1)); }
+function saldo() { var e = A.estadoQ(A.quincenaDe(A.hoyISO())); return e ? e.saldo : null; }
+
+/* Ingredientes y pasos de una receta, con lo que falta marcado. */
+function detalle(r) {
+  var ings = Despensa.estadoIngredientes(r, S.despensa || []), h = "";
+  if (ings.length) h += '<ul class="ings">' + ings.map(function (g) {
+    return '<li' + (g.estado === "ok" ? "" : ' class="falta"') + '>' + esc(g.texto) + (g.estado === "falta" ? " · le falta" : (g.estado === "poco" ? " · no le alcanza" : "")) + '</li>'; }).join("") + '</ul>';
+  if (r.pasos && r.pasos.length) h += '<ol class="pasos">' + r.pasos.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join("") + '</ol>';
+  return h || '<p class="small muted">Esta receta no trae ingredientes ni pasos.</p>';
+}
+
+/* ---------- dibujar ---------- */
+function render() {
+  var lista = dias(), hoy = A.hoyISO();
+  // menú del día elegido
+  $("mLabel").textContent = etiqueta(diaSel);
+  $("mIrHoy").hidden = (diaSel === hoy);
+  var primero = lista.length ? (lista[0].id < hoy ? lista[0].id : hoy) : hoy, ultimo = lista.length && lista[lista.length - 1].id > hoy ? lista[lista.length - 1].id : hoy;
+  $("mPrev").disabled = diaSel <= primero; $("mNext").disabled = diaSel >= ultimo;
+  var d = diaDe(diaSel), M = $("mDia");
+  if (!d) M.innerHTML = '<div class="empty">' + (lista.length ? "No hay menú guardado para este día." : "Aún no tiene un menú guardado. Siga los pasos de abajo para pedírselo a Claude y guardarlo aquí.") + '</div>';
+  else M.innerHTML = MOMENTOS.map(function (m) {
+    var nombre = d[m], h = '<div class="receta"><div class="subt">' + TITULO[m] + '</div>';
+    if (!nombre) return h + '<p>Sin plan para esta comida.</p></div>';
+    if (nombre === "fuera") return h + '<b>Fuera de casa</b><p>No gasta despensa.</p></div>';
+    var r = recetaDe(nombre), hecho = d.hechos && d.hechos[m];
+    h += '<b>' + esc(nombre) + '</b>';
+    if (!r) return h + '<p>La respuesta no trajo la receta de este plato.</p></div>';
+    var falta = Despensa.estadoIngredientes(r, S.despensa || []).filter(function (g) { return g.estado !== "ok"; }).length;
+    h += '<p>' + (hecho ? "Ya la preparó." : (falta ? "Le falta " + falta + (falta === 1 ? " ingrediente." : " ingredientes.") : "Tiene todo para prepararla.")) + '</p>';
+    h += '<details' + (diaSel === hoy && m === momentoAhora() && !hecho ? " open" : "") + '><summary>Ingredientes y preparación</summary>' + detalle(r) + '</details>';
+    if (!hecho) h += '<button class="ghost" type="button" data-menu-hecho="' + m + '">La preparé: descontar</button>';
+    return h + '</div>'; }).join("");
+  // resumen del menú guardado
+  $("mGuardado").hidden = !lista.length;
+  if (lista.length) $("mResumen").textContent = "Menú guardado del " + A.corto(lista[0].id) + " al " + A.corto(lista[lista.length - 1].id) + " (" + lista.length + " día(s)).";
+  // mis recetas
+  var recs = (S.recetas || []).slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre); }), R = $("rLista");
+  if (!recs.length) R.innerHTML = '<div class="empty">Aquí quedan las recetas que le dé Claude cuando guarde un menú.</div>';
+  else R.innerHTML = recs.map(function (r) {
+    return '<details><summary>' + esc(r.nombre) + '</summary><p class="small muted">' + esc((r.momentos || []).map(function (m) { return TITULO[m]; }).join(", ") || "Cualquier momento") + '</p>' + detalle(r) +
+      '<button class="del" type="button" data-quitar-receta="' + esc(r.id) + '">Quitar esta receta</button></details>'; }).join("");
+  // compras que sugirió Claude
+  var sug = sugeridas(), C = $("cSugeridas");
+  $("cSugCard").hidden = !sug.length;
+  if (sug.length) {
+    var total = 0; sug.forEach(function (c) { total += c.precio || 0; });
+    var s = saldo(), pie = '<div class="kv tot"><span>Costo aproximado</span><span class="num">' + money(total) + '</span></div>';
+    if (s != null && total > 0) pie += '<div class="note ' + (total <= s ? "ok" : "bad") + '" style="margin-top:8px">' + (total <= s ?
+      "Le alcanza: le quedan " + money(s) + " de la quincena y después de esta compra quedaría en " + money(s - total) + "." :
+      "No le alcanza: le quedan " + money(s) + " de la quincena. Pídale a Claude un menú más económico.") + '</div>';
+    C.innerHTML = sug.map(function (c) { return '<div class="kv"><span>' + esc(c.alimento) + (c.cantidad ? ' · ' + Despensa.cant(c.cantidad) + ' ' + esc(Despensa.unidadTxt(c.unidad, c.cantidad)) : '') + '</span><span class="num">' + (c.precio ? money(c.precio) : "sin precio") + '</span></div>'; }).join("") + pie;
+  }
+}
+
+/* ---------- navegación entre días ---------- */
+$("mPrev").addEventListener("click", function () { diaSel = sumarDias(diaSel, -1); render(); });
+$("mNext").addEventListener("click", function () { diaSel = sumarDias(diaSel, 1); render(); });
+$("mIrHoy").addEventListener("click", function () { diaSel = A.hoyISO(); render(); });
+
+/* ---------- guardar lo que respondió Claude ---------- */
+function ponerEn(lista, obj) { var i = lista.findIndex(function (x) { return x.id === obj.id; }); if (i >= 0) lista[i] = obj; else lista.push(obj); }
+function quitarDe(nombre, id) { S[nombre] = S[nombre].filter(function (x) { return x.id !== id; }); }
+$("mGuardar").addEventListener("click", function () {
+  var msg = $("menuMsg"), btn = this, r;
+  try { r = Despensa.leerMenu($("mPegar").value); }
+  catch (e) { msg.textContent = e.message === "vacio" ? "El bloque no trae ni menú ni recetas. Pídale a Claude que lo repita con el formato de la pregunta." :
+    "No pude leerlo. Copie completo el bloque de código del final de la respuesta de Claude (empieza con { y termina con }) y péguelo de nuevo."; return; }
+  btn.disabled = true;
+  var hoy = A.hoyISO(), tareas = [], nuevas = {};
+  r.dias.forEach(function (d) { nuevas[d.fecha] = true; });
+  // Los días de un menú anterior, de hoy en adelante, que no vienen en el nuevo se quitan para que no se mezclen dos planes.
+  if (r.dias.length) dias().forEach(function (d) { if (d.id >= hoy && !nuevas[d.id]) tareas.push(A.eliminar("menu", d.id).then(function () { quitarDe("menu", d.id); })); });
+  r.recetas.forEach(function (x) {
+    var previa = (S.recetas || []).filter(function (y) { return (y.clave || Despensa.clave(y.nombre)) === x.clave; })[0];
+    var rec = { id: previa ? previa.id : A.nuevoId(), nombre: x.nombre, clave: x.clave, momentos: x.momentos, ingredientes: x.ingredientes, pasos: x.pasos, origen: "claude" };
+    tareas.push(A.guardar("recetas", rec).then(function () { ponerEn(S.recetas, rec); }));
+  });
+  r.dias.forEach(function (d) { var dia = { id: d.fecha, fecha: d.fecha, desayuno: d.desayuno, almuerzo: d.almuerzo, comida: d.comida, hechos: {} };
+    tareas.push(A.guardar("menu", dia).then(function () { ponerEn(S.menu, dia); })); });
+  if (r.dias.length || r.compras.length) { var com = { id: "compras", lista: r.compras, creado: hoy };
+    tareas.push(A.guardar("menu", com).then(function () { ponerEn(S.menu, com); })); }
+  Promise.all(tareas).then(function () {
+    $("mPegar").value = ""; diaSel = nuevas[hoy] || !r.dias.length ? hoy : r.dias[0].fecha;
+    msg.textContent = "Guardado: " + r.dias.length + " día(s) de menú y " + r.recetas.length + " receta(s)." +
+      (r.compras.length ? " La lista de lo que debe comprar quedó en la pestaña Compras." : "") +
+      (r.sinReceta.length ? " Ojo: el menú nombra platos sin receta: " + r.sinReceta.join(", ") + "." : "");
+    A.render(); window.scrollTo(0, 0);
+  }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
+});
+// Botón "Pegar": trae el texto del portapapeles. Si el navegador no lo permite, se pega a mano en el cuadro.
+if (navigator.clipboard && navigator.clipboard.readText) $("mPegarBtn").addEventListener("click", function () {
+  navigator.clipboard.readText().then(function (t) { $("mPegar").value = t; $("menuMsg").textContent = t ? "Pegado. Ahora toque Guardar menú." : "El portapapeles está vacío."; },
+    function () { $("menuMsg").textContent = "No se pudo leer el portapapeles. Mantenga presionado el cuadro y elija Pegar."; });
+}); else $("mPegarBtn").hidden = true;
+
+/* ---------- borrar ---------- */
+function dosToques(b, texto) { if (b.classList.contains("sure")) return true; b.classList.add("sure"); b.dataset.txt = b.textContent; b.textContent = texto;
+  setTimeout(function () { b.classList.remove("sure"); if (b.dataset.txt) b.textContent = b.dataset.txt; }, 5000); return false; }
+$("mBorrar").addEventListener("click", function () { var b = this; if (!dosToques(b, "¿Seguro? Borrar el menú")) return;
+  Promise.all((S.menu || []).map(function (d) { return A.eliminar("menu", d.id); })).then(function () { S.menu = []; diaSel = A.hoyISO(); b.classList.remove("sure"); b.textContent = "Borrar el menú guardado"; A.render(); }).catch(function () {});
+});
+$("cSugBorrar").addEventListener("click", function () { var b = this; if (!dosToques(b, "¿Seguro? Quitar la lista")) return;
+  A.eliminar("menu", "compras").then(function () { quitarDe("menu", "compras"); b.classList.remove("sure"); b.textContent = "Quitar esta lista"; A.render(); }).catch(function () {});
+});
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta]"); if (!b) return;
+  if (b.dataset.quitarReceta) { if (!dosToques(b, "¿Seguro? Quitar")) return; var id = b.dataset.quitarReceta;
+    A.eliminar("recetas", id).then(function () { quitarDe("recetas", id); A.render(); }).catch(function () {}); return; }
+  // "La preparé": descuenta los ingredientes de la despensa y marca esa comida como hecha.
+  var m = b.dataset.menuHecho, d = diaDe(diaSel); if (!d || !d[m]) return;
+  var r = recetaDe(d[m]); b.disabled = true;
+  var interna = r ? (r.fija || Despensa.interna(r, S.despensa || [])) : null;
+  var cambios = interna ? Despensa.cocinar(S.despensa || [], interna) : [];
+  var dia = Object.assign({}, d); dia.hechos = Object.assign({}, d.hechos || {}); dia.hechos[m] = true;
+  Promise.all(cambios.map(function (c) { return A.guardar("despensa", c).then(function () { ponerEn(S.despensa, c); }); }))
+    .then(function () { return A.guardar("menu", dia); }).then(function () { ponerEn(S.menu, dia); A.render(); }).catch(function () { b.disabled = false; });
+});
+
+A.registrarRender(render);
+render();
+})();
