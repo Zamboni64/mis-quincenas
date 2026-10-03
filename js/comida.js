@@ -76,6 +76,7 @@ function render() {
   if (sel.dataset.ops !== ops) { var prev = sel.value; sel.innerHTML = items.slice().sort(porNombre).map(function (it) { return '<option value="' + esc(it.id) + '">' + esc(it.nombre) + '</option>'; }).join("") +
     '<option value="' + NUEVO + '">Otro producto (nuevo)…</option>'; sel.dataset.ops = ops; if (prev) sel.value = prev; if (!sel.value) sel.value = NUEVO; }
   mostrarCompra();
+  renderHechas();
   // lista de compras con presupuesto
   var lc = Despensa.listaCompras(items), C = $("cCompras");
   if (!lc.lista.length) C.innerHTML = '<div class="empty">No le falta nada por ahora.</div>';
@@ -189,18 +190,55 @@ $("fCompra").addEventListener("submit", function (e) { e.preventDefault();
     c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel;
   } else c.cantidad = Math.round((it.cantidad + cantidad) * 100) / 100;
   c.precio = Math.round(valor / cantidad);
-  var btn = $("coBtn"); btn.disabled = true;
-  guardarAlimento(c).then(function () { return A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor }); })
-    .then(function () { return window.MQ.alComprar ? window.MQ.alComprar(it.nombre, cantidad, it.unidad) : null; })
-    .then(function (falta) { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = ""; 
-      msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + " y se descontaron " + money(valor) + " de la quincena." + (falta || "");
+  var btn = $("coBtn"), esNuevo = !buscar(it.id), frase = ""; btn.disabled = true;
+  guardarAlimento(c).then(function () { return window.MQ.alComprar ? window.MQ.alComprar(it.nombre, cantidad, it.unidad) : null; })
+    .then(function (r) { frase = (r && r.frase) || "";
+      // El gasto guarda los datos de la compra: con eso se puede deshacer completa (plata, despensa y lista del menú).
+      return A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor,
+        compra: { itemId: c.id, nombre: it.nombre, cantidad: cantidad, unidad: it.unidad || "unidades", precio: c.precio, precioAntes: it.precio || 0, nuevo: esNuevo, lista: (r && r.sumado) || 0 } }); })
+    .then(function () { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = "";
+      msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + " y se descontaron " + money(valor) + " de la quincena." + frase;
       A.render(); $("coItem").value = c.id; mostrarCompra(); })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
 });
 
+/* ---------- deshacer una compra ----------
+   Resta de la despensa lo que esa compra sumó, le devuelve el precio anterior y devuelve la cantidad a la lista del menú.
+   Lo usan el botón "Deshacer" de aquí y el botón "Borrar" del gasto en la pestaña Hoy. No borra el gasto: eso lo hace quien llama. */
+function revertirCompra(g) {
+  var c = g.compra, it = buscar(c.itemId), tareas = [];
+  if (it) {
+    var x = Object.assign({}, it);
+    if (it.tipo === "nivel") { var p = Despensa.partes(it), u = Math.max(0, p.unidades - Math.round(c.cantidad)); x.cantidad = u; x.nivel = u > 0 ? p.nivel : 0; }
+    else x.cantidad = Math.max(0, Math.round((it.cantidad - c.cantidad) * 100) / 100);
+    if (it.precio === c.precio) x.precio = c.precioAntes || 0; // solo si nadie cambió el precio después
+    // Un producto que nació con esta compra y queda en cero se quita de la despensa.
+    if (c.nuevo && !x.cantidad) tareas.push(A.eliminar("despensa", it.id).then(function () { S.despensa = S.despensa.filter(function (y) { return y.id !== it.id; }); }));
+    else tareas.push(guardarAlimento(x));
+  }
+  if (c.lista && window.MQ.alDeshacerLista) tareas.push(window.MQ.alDeshacerLista(c.nombre, c.lista));
+  return Promise.all(tareas);
+}
+window.MQ.alBorrarCompra = revertirCompra;
+function comprasHechas() { return (S.gastos || []).filter(function (g) { return g.compra; }).sort(function (a, b) { return (b.creado || "").localeCompare(a.creado || ""); }).slice(0, 15); }
+function renderHechas() {
+  var L = comprasHechas(); $("coHechasCard").hidden = !L.length;
+  $("coHechas").innerHTML = L.map(function (g) { var c = g.compra;
+    return '<div class="item"><div class="tx"><b>' + esc(c.nombre) + ' · ' + Despensa.cant(c.cantidad) + ' ' + esc(Despensa.unidadTxt(c.unidad, c.cantidad)) + '</b><span>' + esc(A.corto(g.fecha)) + '</span></div>' +
+      '<div class="amt num">' + money(g.valor) + '</div><button class="del" type="button" data-deshacer="' + esc(g.id) + '">Deshacer</button></div>'; }).join("");
+}
+
 /* ---------- botones de la lista y de las recetas ---------- */
 document.addEventListener("click", function (e) {
-  var b = e.target.closest("[data-mas],[data-menos],[data-editar],[data-cocinar]"); if (!b) return;
+  var b = e.target.closest("[data-mas],[data-menos],[data-editar],[data-cocinar],[data-deshacer]"); if (!b) return;
+  if (b.dataset.deshacer) { // pide confirmación en el mismo botón
+    if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "¿Seguro? Deshacer"; setTimeout(function () { b.classList.remove("sure"); b.textContent = "Deshacer"; }, 3500); return; }
+    var g = (S.gastos || []).filter(function (x) { return x.id === b.dataset.deshacer; })[0]; if (!g) return; b.disabled = true;
+    revertirCompra(g).then(function () { return A.eliminar("gastos", g.id); })
+      .then(function () { S.gastos = S.gastos.filter(function (x) { return x.id !== g.id; }); $("coItem").dataset.ops = "";
+        $("coHechasMsg").textContent = "Compra deshecha: " + g.compra.nombre + ". Volvieron " + money(g.valor) + " a la quincena y se restó de la despensa."; A.render(); })
+      .catch(function () { b.disabled = false; $("coHechasMsg").textContent = "No se pudo deshacer en este dispositivo."; });
+    return; }
   if (b.dataset.mas) ajustar(b.dataset.mas, 1);
   else if (b.dataset.menos) ajustar(b.dataset.menos, -1);
   else if (b.dataset.editar) { var it = buscar(b.dataset.editar); if (it) cargarForm(it); }

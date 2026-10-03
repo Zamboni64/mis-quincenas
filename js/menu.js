@@ -82,14 +82,27 @@ function render() {
 }
 
 /* Cuando se registra una compra (desde el botón "Comprar" o directo en el formulario), se resta de esta lista.
-   Devuelve una frase para el mensaje del formulario. */
+   Devuelve una frase para el mensaje del formulario y cuánto se le sumó a la lista (para poder deshacerlo). */
+function docCompras() { return (S.menu || []).filter(function (d) { return d.id === "compras"; })[0]; }
+function enLista(lista, nombre) { var k = Despensa.clave(nombre); return (lista || []).filter(function (x) { return Despensa.clave(x.alimento) === k; }); }
 window.MQ.alComprar = function (nombre, cantidad, unidad) {
-  var doc = (S.menu || []).filter(function (d) { return d.id === "compras"; })[0]; if (!doc) return "";
-  var nueva = Despensa.anotarCompra(doc.lista, nombre, cantidad, unidad); if (!nueva) return "";
-  var k = Despensa.clave(nombre), c = nueva.filter(function (x) { return Despensa.clave(x.alimento) === k; })[0], falta = Despensa.faltaDe(c);
+  var doc = docCompras(), nada = { frase: "", sumado: 0 }; if (!doc) return nada;
+  var nueva = Despensa.anotarCompra(doc.lista, nombre, cantidad, unidad); if (!nueva) return nada;
+  var antes = 0, despues = 0; enLista(doc.lista, nombre).forEach(function (x) { antes += x.comprado || 0; }); enLista(nueva, nombre).forEach(function (x) { despues += x.comprado || 0; });
+  var c = enLista(nueva, nombre).filter(function (x) { return x.comprado; })[0], falta = Despensa.faltaDe(c);
   var d2 = Object.assign({}, doc); d2.lista = nueva;
   return A.guardar("menu", d2).then(function () { ponerEn(S.menu, d2);
-    return falta > 0 ? " Para el menú aún " + (falta === 1 ? "falta " : "faltan ") + Despensa.cant(falta) + " " + Despensa.unidadTxt(c.unidad, falta) + "." : " Con esto completa lo que pedía el menú."; });
+    return { sumado: Math.round((despues - antes) * 100) / 100, frase: falta > 0 ? " Para el menú aún " + (falta === 1 ? "falta " : "faltan ") + Despensa.cant(falta) + " " + Despensa.unidadTxt(c.unidad, falta) + "." : " Con esto completa lo que pedía el menú." }; });
+};
+// Al deshacer una compra, se le devuelve a la lista lo que esa compra le había sumado.
+window.MQ.alDeshacerLista = function (nombre, sumado) {
+  var doc = docCompras(); if (!doc || !sumado) return null;
+  var hecho = false, nueva = (doc.lista || []).map(function (x) {
+    if (hecho || Despensa.clave(x.alimento) !== Despensa.clave(nombre) || !x.comprado) return x;
+    var y = Object.assign({}, x); y.comprado = Math.max(0, Math.round((x.comprado - sumado) * 100) / 100); hecho = true; return y; });
+  if (!hecho) return null;
+  var d2 = Object.assign({}, doc); d2.lista = nueva;
+  return A.guardar("menu", d2).then(function () { ponerEn(S.menu, d2); });
 };
 
 /* ---------- navegación entre días ---------- */

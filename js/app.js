@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.6";
+var VERSION_APP = "3.7";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -86,7 +86,7 @@ function renderHoy() {
   var G = $("listaGastos");
   if (!lista.length) G.innerHTML = '<div class="empty">Aún no hay gastos anotados en esta quincena.</div>';
   else G.innerHTML = lista.slice().sort(function (a, b) { return (b.fecha + b.creado).localeCompare(a.fecha + a.creado); }).map(function (g) {
-    return '<div class="item"><div class="tx"><b>' + esc(g.descripcion || g.categoria) + '</b><span>' + esc(corto(g.fecha)) + ' · ' + esc(g.categoria) + (g.medio === "Tarjeta Davibank" ? ' · tarjeta' : '') + '</span></div>' +
+    return '<div class="item"><div class="tx"><b>' + esc(g.descripcion || g.categoria) + '</b><span>' + esc(corto(g.fecha)) + ' · ' + esc(g.categoria) + (g.medio === "Tarjeta Davibank" ? ' · tarjeta' : '') + (g.compra ? ' · al borrarlo también sale de la despensa' : '') + '</span></div>' +
       '<div class="amt num">' + money(g.valor) + '</div><button class="del" data-col="gastos" data-id="' + esc(g.id) + '">Borrar</button></div>'; }).join("");
   var tot = {}, t = 0; lista.forEach(function (g) { tot[g.categoria] = (tot[g.categoria] || 0) + g.valor; t += g.valor; });
   var ks = Object.keys(tot).sort(function (a, b) { return tot[b] - tot[a]; });
@@ -261,6 +261,7 @@ $("iOrigen").addEventListener("change", function () { this.dataset.tocado = "1";
 // Crea un gasto y lo guarda. Lo usan el formulario de "Hoy" y las compras de la despensa.
 function nuevoGasto(d) {
   var g = { id: Almacen.nuevoId(), fecha: d.fecha, quincena: quincenaDe(d.fecha), categoria: d.categoria, descripcion: d.descripcion || "", valor: d.valor, medio: d.medio || "Efectivo o débito", creado: new Date().toISOString() };
+  if (d.compra) g.compra = d.compra; // datos de la compra de despensa que originó el gasto, para poder deshacerla
   return guardar("gastos", g).then(function () { S.gastos.push(g); return g; });
 }
 $("fGasto").addEventListener("submit", function (e) { e.preventDefault();
@@ -300,7 +301,10 @@ document.addEventListener("click", function (e) {
   if (d) { // borrar pide confirmación en el mismo botón
     if (!d.classList.contains("sure")) { d.classList.add("sure"); d.textContent = "¿Seguro? Borrar"; setTimeout(function () { d.classList.remove("sure"); d.textContent = "Borrar"; }, 3500); return; }
     var col = d.dataset.col, id = d.dataset.id;
-    eliminar(col, id).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
+    // Si el gasto viene de una compra de despensa, al borrarlo también se resta lo comprado de la despensa.
+    var gasto = col === "gastos" ? S.gastos.filter(function (x) { return x.id === id; })[0] : null;
+    var antes = gasto && gasto.compra && window.MQ.alBorrarCompra ? window.MQ.alBorrarCompra(gasto) : Promise.resolve();
+    antes.then(function () { return eliminar(col, id); }).then(function () { S[col] = S[col].filter(function (x) { return x.id !== id; }); recalcular(); render(); }).catch(function () {});
     return; }
   var md = e.target.closest(".del[data-debe]");
   if (md) {
