@@ -265,8 +265,8 @@ function revertirCompra(g) {
 window.MQ.alBorrarCompra = revertirCompra;
 function comprasHechas() { return (S.gastos || []).filter(function (g) { return g.compra; }).sort(function (a, b) { return (b.creado || "").localeCompare(a.creado || ""); }).slice(0, 15); }
 function renderHechas() {
-  var L = comprasHechas(); $("coHechasCard").hidden = !L.length;
-  $("coHechas").innerHTML = L.map(function (g) { var c = g.compra;
+  var L = comprasHechas(); $("coHechasCard").hidden = false;
+  $("coHechas").innerHTML = !L.length ? '<div class="empty">Aún no hay compras para deshacer. Aquí aparecen las que registre de ahora en adelante; las que hizo con una versión anterior de la app no guardaron los datos para deshacerlas.</div>' : L.map(function (g) { var c = g.compra;
     return '<div class="item"><div class="tx"><b>' + esc(c.nombre) + ' · ' + Despensa.cant(c.cantidad) + ' ' + esc(Despensa.unidadTxt(c.unidad, c.cantidad)) + '</b><span>' + esc(A.corto(g.fecha)) + '</span></div>' +
       '<div class="amt num">' + money(g.valor) + '</div><button class="del" type="button" data-deshacer="' + esc(g.id) + '">Deshacer</button></div>'; }).join("");
 }

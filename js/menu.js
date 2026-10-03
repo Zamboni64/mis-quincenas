@@ -71,7 +71,9 @@ function render() {
       var falta = Despensa.faltaDe(c), pedido = c.cantidad ? Despensa.cant(c.cantidad) + ' ' + Despensa.unidadTxt(c.unidad, c.cantidad) : '';
       var costo = falta > 0 ? (c.cantidad ? Math.round((c.precio || 0) * falta / c.cantidad) : (c.precio || 0)) : 0; total += costo; if (falta > 0) pendientes++;
       var estado = falta <= 0 ? 'Comprado ✓' : (c.comprado ? (falta === 1 ? 'Falta ' : 'Faltan ') + Despensa.cant(falta) + ' ' + Despensa.unidadTxt(c.unidad, falta) + ' (lleva ' + Despensa.cant(c.comprado) + ')' : (costo ? 'Unos ' + money(costo) : 'Sin precio'));
-      return '<div class="item' + (falta <= 0 ? ' hecho' : '') + '"><div class="tx"><b>' + esc(c.alimento) + (pedido ? ' · ' + esc(pedido) : '') + '</b><span>' + esc(estado) + '</span></div>' +
+      // "Desmarcar" pone en cero lo comprado, por si quedó marcado por una prueba o un error.
+      var desmarcar = c.comprado ? ' · <button class="del" type="button" data-desmarcar="' + i + '">Desmarcar</button>' : '';
+      return '<div class="item' + (falta <= 0 ? ' hecho' : '') + '"><div class="tx"><b>' + esc(c.alimento) + (pedido ? ' · ' + esc(pedido) : '') + '</b><span>' + esc(estado) + desmarcar + '</span></div>' +
         (falta > 0 ? '<button class="ghost chico" type="button" data-comprar="' + i + '">Comprar</button>' : '') + '</div>'; }).join("");
     var s = saldo(), pie = pendientes ? '<div class="kv tot"><span>Falta por comprar (aprox.)</span><span class="num">' + money(total) + '</span></div>' : '<div class="note ok" style="margin-top:8px">Ya compró todo lo del menú.</div>';
     if (pendientes && s != null && total > 0) pie += '<div class="note ' + (total <= s ? "ok" : "bad") + '" style="margin-top:8px">' + (total <= s ?
@@ -156,7 +158,10 @@ $("cSugBorrar").addEventListener("click", function () { var b = this; if (!dosTo
   A.eliminar("menu", "compras").then(function () { quitarDe("menu", "compras"); b.classList.remove("sure"); b.textContent = "Quitar esta lista"; A.render(); }).catch(function () {});
 });
 document.addEventListener("click", function (e) {
-  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta],[data-comprar]"); if (!b) return;
+  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta],[data-comprar],[data-desmarcar]"); if (!b) return;
+  if (b.dataset.desmarcar) { var doc = docCompras(), i = +b.dataset.desmarcar; if (!doc || !doc.lista[i]) return;
+    var d2 = Object.assign({}, doc); d2.lista = doc.lista.map(function (x, j) { if (j !== i) return x; var y = Object.assign({}, x); y.comprado = 0; return y; });
+    A.guardar("menu", d2).then(function () { ponerEn(S.menu, d2); A.render(); }).catch(function () {}); return; }
   // "Comprar": pasa el producto al formulario de compra con lo que falta y su costo aproximado, para corregirlos.
   if (b.dataset.comprar) { var c = sugeridas()[+b.dataset.comprar]; if (!c) return; var falta = Despensa.faltaDe(c);
     window.MQ.prepararCompra({ nombre: c.alimento, unidad: c.unidad, cantidad: c.cantidad ? falta : 0, valor: c.cantidad ? Math.round((c.precio || 0) * falta / c.cantidad) : (c.precio || 0) }); return; }
