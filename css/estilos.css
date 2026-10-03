@@ -133,3 +133,6 @@ ul.ings li.falta{color:var(--bad)}
 ul.ings li.falta::before{content:"\2717";color:var(--bad)}
 .receta details{border-top:0;padding:2px 0 6px}
 #mPegar{font:inherit;font-size:16px;min-height:110px;padding:10px 12px}
+.ghost.chico{width:auto;flex:none;padding:8px 14px;font-size:13px}
+.item.hecho .tx b{color:var(--muted);font-weight:600}
+.item.hecho .tx span{color:var(--ok)}

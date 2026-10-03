@@ -299,13 +299,18 @@
 
     <div class="card">
       <h2>Registrar una compra</h2>
-      <p class="small muted" style="margin-bottom:8px">Suma a la despensa y, si escribe cuánto pagó, lo anota también como gasto de mercado.</p>
+      <p class="small muted" style="margin-bottom:8px">Suma lo comprado a la despensa y descuenta lo que pagó de la quincena, como gasto de mercado. Lo que ya tenía en la cocina se agrega en la pestaña Despensa, no aquí.</p>
       <form id="fCompra" autocomplete="off">
         <label>Qué compró <select id="coItem"></select></label>
+        <div class="row2" id="coNuevoBox" hidden>
+          <label>Nombre del producto <input id="coNombre" list="cCatalogo" maxlength="40" placeholder="Ej.: Pollo"></label>
+          <label>Unidad <select id="coUnidad"></select></label>
+        </div>
         <div class="row2">
-          <label id="coCantL">Cuánto <input id="coCant" inputmode="decimal" placeholder="Ej.: 12"></label>
+          <label>Cuánto compró <input id="coCant" inputmode="decimal" placeholder="Ej.: 12"></label>
           <label>Cuánto pagó en total <input id="coValor" inputmode="numeric" placeholder="$ 0"></label>
         </div>
+        <div class="small muted" id="coUniTxt"></div>
         <button class="primary" id="coBtn" type="submit">Registrar compra</button>
         <div class="small muted" id="coMsg" role="status"></div>
       </form>

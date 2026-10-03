@@ -251,7 +251,21 @@ var Despensa = (function () {
       ingredientes: Object.keys(r.ing).map(function (k) { var u = (CATALOGO[k] || ["unidades"])[0]; return { alimento: nombreBonito(k), clave: k, cantidad: r.ing[k], unidad: u, texto: cant(r.ing[k]) + " " + unidadTxt(u, r.ing[k]) + " de " + nombreBonito(k).toLowerCase() }; }) };
   }
 
-  return { MOMENTOS: MOMENTOS, leerMenu: leerMenu, interna: interna, estadoIngredientes: estadoIngredientes, delRecetario: delRecetario,
+  /* Lista de compras del menú: cada producto lleva cuánto se pidió y cuánto se ha comprado.
+     Si no se pidió una cantidad, basta una compra para darlo por comprado. */
+  function faltaDe(c) { var pedido = n(c.cantidad), hecho = n(c.comprado); return pedido > 0 ? Math.max(0, Math.round((pedido - hecho) * 100) / 100) : (hecho > 0 ? 0 : 1); }
+  // Suma una compra al producto de la lista que corresponda. Si la unidad es distinta no se puede restar, así que se da por comprado completo.
+  function anotarCompra(lista, nombre, cantidad, unidad) {
+    var k = clave(nombre), cambio = false;
+    var nueva = (lista || []).map(function (c) {
+      if (cambio || clave(c.alimento) !== k || faltaDe(c) <= 0) return c;
+      var x = Object.assign({}, c), igual = !n(c.cantidad) || unidadBase(c.unidad) === unidadBase(unidad);
+      x.comprado = igual ? Math.round((n(c.comprado) + n(cantidad)) * 100) / 100 : Math.max(n(c.cantidad), 1); cambio = true; return x;
+    });
+    return cambio ? nueva : null;
+  }
+
+  return { faltaDe: faltaDe, anotarCompra: anotarCompra, MOMENTOS: MOMENTOS, leerMenu: leerMenu, interna: interna, estadoIngredientes: estadoIngredientes, delRecetario: delRecetario,
     UNIDADES: UNIDADES, partes: partes, equivalente: equivalente, ajustarNivel: ajustarNivel, textoUnidades: textoUnidades, textoNivel: textoNivel, sinReceta: sinReceta,
     catalogo: catalogo, sugerido: sugerido, clave: clave, enAlerta: enAlerta, resumen: resumen, diasQueDura: diasQueDura, recetas: recetas, cocinar: cocinar,
     listaCompras: listaCompras, textoCantidad: textoCantidad, unidadTxt: unidadTxt, cant: cant, NIVELES: NIVELES, RECETAS: RECETAS };

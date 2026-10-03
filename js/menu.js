@@ -62,18 +62,35 @@ function render() {
   else R.innerHTML = recs.map(function (r) {
     return '<details><summary>' + esc(r.nombre) + '</summary><p class="small muted">' + esc((r.momentos || []).map(function (m) { return TITULO[m]; }).join(", ") || "Cualquier momento") + '</p>' + detalle(r) +
       '<button class="del" type="button" data-quitar-receta="' + esc(r.id) + '">Quitar esta receta</button></details>'; }).join("");
-  // compras que sugirió Claude
+  // compras para el menú: cuánto falta de cada producto y lo que costaría lo que falta
   var sug = sugeridas(), C = $("cSugeridas");
   $("cSugCard").hidden = !sug.length;
   if (sug.length) {
-    var total = 0; sug.forEach(function (c) { total += c.precio || 0; });
-    var s = saldo(), pie = '<div class="kv tot"><span>Costo aproximado</span><span class="num">' + money(total) + '</span></div>';
-    if (s != null && total > 0) pie += '<div class="note ' + (total <= s ? "ok" : "bad") + '" style="margin-top:8px">' + (total <= s ?
-      "Le alcanza: le quedan " + money(s) + " de la quincena y después de esta compra quedaría en " + money(s - total) + "." :
+    var total = 0, pendientes = 0;
+    var filas = sug.map(function (c, i) {
+      var falta = Despensa.faltaDe(c), pedido = c.cantidad ? Despensa.cant(c.cantidad) + ' ' + Despensa.unidadTxt(c.unidad, c.cantidad) : '';
+      var costo = falta > 0 ? (c.cantidad ? Math.round((c.precio || 0) * falta / c.cantidad) : (c.precio || 0)) : 0; total += costo; if (falta > 0) pendientes++;
+      var estado = falta <= 0 ? 'Comprado ✓' : (c.comprado ? (falta === 1 ? 'Falta ' : 'Faltan ') + Despensa.cant(falta) + ' ' + Despensa.unidadTxt(c.unidad, falta) + ' (lleva ' + Despensa.cant(c.comprado) + ')' : (costo ? 'Unos ' + money(costo) : 'Sin precio'));
+      return '<div class="item' + (falta <= 0 ? ' hecho' : '') + '"><div class="tx"><b>' + esc(c.alimento) + (pedido ? ' · ' + esc(pedido) : '') + '</b><span>' + esc(estado) + '</span></div>' +
+        (falta > 0 ? '<button class="ghost chico" type="button" data-comprar="' + i + '">Comprar</button>' : '') + '</div>'; }).join("");
+    var s = saldo(), pie = pendientes ? '<div class="kv tot"><span>Falta por comprar (aprox.)</span><span class="num">' + money(total) + '</span></div>' : '<div class="note ok" style="margin-top:8px">Ya compró todo lo del menú.</div>';
+    if (pendientes && s != null && total > 0) pie += '<div class="note ' + (total <= s ? "ok" : "bad") + '" style="margin-top:8px">' + (total <= s ?
+      "Le alcanza: le quedan " + money(s) + " de la quincena y después de comprar lo que falta quedaría en " + money(s - total) + "." :
       "No le alcanza: le quedan " + money(s) + " de la quincena. Pídale a Claude un menú más económico.") + '</div>';
-    C.innerHTML = sug.map(function (c) { return '<div class="kv"><span>' + esc(c.alimento) + (c.cantidad ? ' · ' + Despensa.cant(c.cantidad) + ' ' + esc(Despensa.unidadTxt(c.unidad, c.cantidad)) : '') + '</span><span class="num">' + (c.precio ? money(c.precio) : "sin precio") + '</span></div>'; }).join("") + pie;
+    C.innerHTML = filas + pie;
   }
 }
+
+/* Cuando se registra una compra (desde el botón "Comprar" o directo en el formulario), se resta de esta lista.
+   Devuelve una frase para el mensaje del formulario. */
+window.MQ.alComprar = function (nombre, cantidad, unidad) {
+  var doc = (S.menu || []).filter(function (d) { return d.id === "compras"; })[0]; if (!doc) return "";
+  var nueva = Despensa.anotarCompra(doc.lista, nombre, cantidad, unidad); if (!nueva) return "";
+  var k = Despensa.clave(nombre), c = nueva.filter(function (x) { return Despensa.clave(x.alimento) === k; })[0], falta = Despensa.faltaDe(c);
+  var d2 = Object.assign({}, doc); d2.lista = nueva;
+  return A.guardar("menu", d2).then(function () { ponerEn(S.menu, d2);
+    return falta > 0 ? " Para el menú aún " + (falta === 1 ? "falta " : "faltan ") + Despensa.cant(falta) + " " + Despensa.unidadTxt(c.unidad, falta) + "." : " Con esto completa lo que pedía el menú."; });
+};
 
 /* ---------- navegación entre días ---------- */
 $("mPrev").addEventListener("click", function () { diaSel = sumarDias(diaSel, -1); render(); });
@@ -126,7 +143,10 @@ $("cSugBorrar").addEventListener("click", function () { var b = this; if (!dosTo
   A.eliminar("menu", "compras").then(function () { quitarDe("menu", "compras"); b.classList.remove("sure"); b.textContent = "Quitar esta lista"; A.render(); }).catch(function () {});
 });
 document.addEventListener("click", function (e) {
-  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta]"); if (!b) return;
+  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta],[data-comprar]"); if (!b) return;
+  // "Comprar": pasa el producto al formulario de compra con lo que falta y su costo aproximado, para corregirlos.
+  if (b.dataset.comprar) { var c = sugeridas()[+b.dataset.comprar]; if (!c) return; var falta = Despensa.faltaDe(c);
+    window.MQ.prepararCompra({ nombre: c.alimento, unidad: c.unidad, cantidad: c.cantidad ? falta : 0, valor: c.cantidad ? Math.round((c.precio || 0) * falta / c.cantidad) : (c.precio || 0) }); return; }
   if (b.dataset.quitarReceta) { if (!dosToques(b, "¿Seguro? Quitar")) return; var id = b.dataset.quitarReceta;
     A.eliminar("recetas", id).then(function () { quitarDe("recetas", id); A.render(); }).catch(function () {}); return; }
   // "La preparé": descuenta los ingredientes de la despensa y marca esa comida como hecha.

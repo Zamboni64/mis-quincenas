@@ -73,7 +73,9 @@ function render() {
       '<button class="mini" type="button" data-mas="' + esc(it.id) + '" aria-label="Más ' + esc(it.nombre) + '">+</button></div>'; }).join("");
   // selector de compra
   var sel = $("coItem"), ops = items.slice().sort(porNombre).map(function (it) { return it.id + "|" + it.nombre; }).join("\n");
-  if (sel.dataset.ops !== ops) { var prev = sel.value; sel.innerHTML = items.slice().sort(porNombre).map(function (it) { return '<option value="' + esc(it.id) + '">' + esc(it.nombre) + '</option>'; }).join(""); sel.dataset.ops = ops; if (prev) sel.value = prev; }
+  if (sel.dataset.ops !== ops) { var prev = sel.value; sel.innerHTML = items.slice().sort(porNombre).map(function (it) { return '<option value="' + esc(it.id) + '">' + esc(it.nombre) + '</option>'; }).join("") +
+    '<option value="' + NUEVO + '">Otro producto (nuevo)…</option>'; sel.dataset.ops = ops; if (prev) sel.value = prev; if (!sel.value) sel.value = NUEVO; }
+  mostrarCompra();
   // lista de compras con presupuesto
   var lc = Despensa.listaCompras(items), C = $("cCompras");
   if (!lc.lista.length) C.innerHTML = '<div class="empty">No le falta nada por ahora.</div>';
@@ -146,20 +148,53 @@ $("aliQuitar").addEventListener("click", function () { var b = this, id = editan
   A.eliminar("despensa", id).then(function () { S.despensa = S.despensa.filter(function (x) { return x.id !== id; }); limpiarForm(); A.render(); }).catch(function () {});
 });
 
-/* ---------- compra: suma a la despensa y anota el gasto ---------- */
-$("fCompra").addEventListener("submit", function (e) { e.preventDefault(); var msg = $("coMsg"), it = buscar($("coItem").value);
-  if (!it) { msg.textContent = "Primero agregue el alimento en la pestaña Despensa."; return; }
-  var cantidad = dec($("coCant").value), valor = A.num($("coValor").value);
-  if (it.tipo !== "nivel" && !cantidad) { msg.textContent = "Escriba cuánto compró."; return; }
+/* ---------- compra: suma a la despensa y descuenta de la quincena ----------
+   Una compra siempre lleva lo que se pagó: sin valor no se guarda, porque el alimento quedaría en la despensa
+   y la plata gastada no aparecería en Mis Quincenas. Lo que ya se tenía en la cocina se agrega en Despensa. */
+var NUEVO = "__nuevo";
+function unidadDeCompra(u) { var sel = $("coUnidad"); u = u || "unidades";
+  if (!Array.prototype.some.call(sel.options, function (o) { return o.value === u; })) { var o = document.createElement("option"); o.value = u; o.textContent = u; sel.appendChild(o); }
+  sel.value = u; }
+$("coUnidad").innerHTML = Despensa.UNIDADES.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join("");
+function mostrarCompra() { var v = $("coItem").value, it = buscar(v), nuevo = (v === NUEVO || !it);
+  $("coNuevoBox").hidden = !nuevo;
+  $("coUniTxt").textContent = nuevo ? "" : "La cantidad va en " + (it.unidad || "unidades") + ", como está en su despensa."; }
+$("coItem").addEventListener("change", mostrarCompra);
+// Al escribir un producto conocido se propone su unidad (pollo en libras, atún en latas…).
+$("coNombre").addEventListener("change", function () { var sug = Despensa.sugerido(this.value); if (sug) unidadDeCompra(sug.unidad); });
+// Deja el formulario listo con un producto (lo usa el botón "Comprar" de la lista del menú).
+function prepararCompra(d) {
+  var k = Despensa.clave(d.nombre), it = (S.despensa || []).filter(function (x) { return (x.clave || Despensa.clave(x.nombre)) === k; })[0];
+  if (it) $("coItem").value = it.id; else { $("coItem").value = NUEVO; $("coNombre").value = d.nombre; unidadDeCompra(d.unidad || (Despensa.sugerido(d.nombre) || {}).unidad); }
+  mostrarCompra();
+  $("coCant").value = d.cantidad ? Despensa.cant(d.cantidad) : ""; $("coValor").value = d.valor ? money(d.valor) : "";
+  $("coMsg").textContent = "Corrija la cantidad que compró y lo que pagó, y toque Registrar compra.";
+  $("fCompra").scrollIntoView({ block: "center" }); try { $("coCant").focus({ preventScroll: true }); } catch (e) {}
+}
+window.MQ.prepararCompra = prepararCompra;
+$("fCompra").addEventListener("submit", function (e) { e.preventDefault();
+  var msg = $("coMsg"), v = $("coItem").value, it = buscar(v), cantidad = dec($("coCant").value), valor = A.num($("coValor").value);
+  if (!it) { // producto nuevo: si ya existe uno con ese nombre, se usa ese
+    var nombre = $("coNombre").value.trim(); if (!nombre) { msg.textContent = "Escriba el nombre del producto."; return; }
+    var k = Despensa.clave(nombre); it = (S.despensa || []).filter(function (x) { return (x.clave || Despensa.clave(x.nombre)) === k; })[0];
+    if (!it) { var sug = Despensa.sugerido(nombre) || { tipo: "contable", rol: "otro", rinde: 0, minimo: 1, unidad: "unidades" }, u = $("coUnidad").value || "unidades";
+      it = { id: A.nuevoId(), nombre: nombre, clave: k, tipo: sug.tipo, rol: sug.rol, rinde: sug.rinde * (sug.unidad === "libras" && u === "kilos" ? 2 : 1), unidad: u, precio: 0, cantidad: 0, minimo: sug.tipo === "nivel" ? 0 : sug.minimo };
+      if (sug.tipo === "nivel") it.nivel = 0; }
+  }
+  if (!cantidad) { msg.textContent = "Escriba cuánto compró."; return; }
+  if (!valor) { msg.textContent = "Escriba cuánto pagó. Una compra siempre se descuenta de la quincena; si es algo que ya tenía, agréguelo en la pestaña Despensa."; return; }
   var c = Object.assign({}, it);
   if (it.tipo === "nivel") { // las unidades nuevas llegan llenas; la que estaba en uso sigue como estaba
     cantidad = Math.max(1, Math.round(cantidad)); var p = Despensa.partes(it);
     c.cantidad = p.unidades + cantidad; c.nivel = p.unidades === 0 ? 3 : p.nivel;
   } else c.cantidad = Math.round((it.cantidad + cantidad) * 100) / 100;
-  if (valor) c.precio = Math.round(valor / cantidad);
+  c.precio = Math.round(valor / cantidad);
   var btn = $("coBtn"); btn.disabled = true;
-  guardarAlimento(c).then(function () { return valor ? A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor }) : null; })
-    .then(function () { $("coCant").value = ""; $("coValor").value = ""; msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + (valor ? " y se anotó un gasto de " + money(valor) + "." : "."); A.render(); })
+  guardarAlimento(c).then(function () { return A.nuevoGasto({ fecha: A.hoyISO(), categoria: "Mercado", descripcion: "Compra: " + it.nombre, valor: valor }); })
+    .then(function () { return window.MQ.alComprar ? window.MQ.alComprar(it.nombre, cantidad, it.unidad) : null; })
+    .then(function (falta) { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = ""; 
+      msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + " y se descontaron " + money(valor) + " de la quincena." + (falta || "");
+      A.render(); $("coItem").value = c.id; mostrarCompra(); })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
 });
 

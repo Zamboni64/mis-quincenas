@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.5";
+var VERSION_APP = "3.6";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
