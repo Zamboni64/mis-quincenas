@@ -331,6 +331,43 @@
     </div>
   </section>
 
+  <!-- ===================== MIS COMIDAS: FREIDORA ===================== -->
+  <section class="tab" id="tab-freidora" hidden>
+    <div class="card">
+      <h2>Qué puedo hacer en la freidora</h2>
+      <p class="small muted" style="margin-bottom:6px">Recetas para la freidora de aire, para una porción. Primero salen las que puede hacer con lo que tiene en la despensa.</p>
+      <div id="frLista"><div class="empty">Cargando…</div></div>
+      <div class="small muted" id="frMsg" role="status"></div>
+    </div>
+
+    <div class="card" id="frOtrasCard" hidden>
+      <details>
+        <summary>Otras recetas de freidora (le falta algo)</summary>
+        <div id="frOtras"></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Pedirle recetas de freidora a Claude</h2>
+      <ol class="pasos">
+        <li>Copie su despensa con este botón.</li>
+      </ol>
+      <button class="primary" id="frCopiar" type="button" style="width:100%">Copiar despensa para la freidora</button>
+      <div class="small muted" id="frCopMsg" role="status" style="margin-top:6px"></div>
+      <textarea id="frCopTxt" hidden readonly></textarea>
+      <ol class="pasos" start="2">
+        <li>Péguelo en un chat con Claude y espere la respuesta: le da las recetas y, al final, un bloque de código.</li>
+        <li>Copie ese bloque de código y péguelo aquí. Las recetas quedan guardadas en esta pestaña.</li>
+      </ol>
+      <textarea id="frPegar" placeholder="Pegue aquí el bloque que le dio Claude" aria-label="Respuesta de Claude con recetas de freidora"></textarea>
+      <div class="stack" style="margin-top:8px">
+        <button class="ghost" id="frPegarBtn" type="button">Pegar lo copiado</button>
+        <button class="primary" id="frGuardar" type="button">Guardar recetas</button>
+      </div>
+      <div class="small muted" id="frPegarMsg" role="status" style="margin-top:6px"></div>
+    </div>
+  </section>
+
   <!-- ===================== PLAN ===================== -->
   <section class="tab" id="tab-plan" hidden>
     <div class="note plain" id="planResumen">Cargando el plan…</div>
@@ -448,6 +485,7 @@
   <button role="tab" data-tab="despensa" aria-selected="false">Despensa<span class="badge" id="badgeDespensa" hidden></span></button>
   <button role="tab" data-tab="recetas" aria-selected="false">Recetas</button>
   <button role="tab" data-tab="compras" aria-selected="false">Compras</button>
+  <button role="tab" data-tab="freidora" aria-selected="false">Freidora</button>
 </nav>
 
 <script src="js/motor.js"></script>
@@ -456,6 +494,7 @@
 <script src="js/app.js"></script>
 <script src="js/comida.js"></script>
 <script src="js/menu.js"></script>
+<script src="js/freidora.js"></script>
 <script src="js/firebase-config.js"></script>
 <script type="module" src="js/nube.js"></script>
 </body>

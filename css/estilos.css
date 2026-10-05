@@ -142,3 +142,9 @@ label.chico{display:flex;flex-direction:row;align-items:center;gap:6px;width:aut
 label.chico select{width:auto;padding:7px 8px;font-size:16px}
 .note.sug{font-size:13px;font-weight:400;margin:0 0 8px}
 .note.sug .del{color:var(--accent);font-weight:700;font-size:13px}
+/* Pestaña Freidora */
+#frPegar{font:inherit;font-size:16px;min-height:110px;padding:10px 12px}
+.receta p .pill{margin-right:4px}
+ul.ings li.opc{color:var(--muted)}
+ul.ings li.opc::before{content:"\2013";color:var(--muted)}
+#frOtrasCard details{padding:0}
