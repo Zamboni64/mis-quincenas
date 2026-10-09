@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.16";
+var VERSION_APP = "3.17";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe, diaPago = Motor.diaPago;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -50,10 +50,12 @@ function arrastreDe(q) {
   for (var i = 1; i < rows.length && rows[i].fecha <= q; i++) {
     var p = rows[i - 1], g = 0; if (p.fecha >= actual) return 0;
     gastosDe(p.fecha).forEach(function (x) { g += x.valor || 0; });
-    a = (S.ajustes[p.fecha] != null ? S.ajustes[p.fecha] : p.libre - p.extra) + p.extra + a - g;
+    a = (S.ajustes[p.fecha] != null ? S.ajustes[p.fecha] : p.libre - p.extra) + p.extra + a - g - enviadoDe(rows[i].fecha);
   }
   return a;
 }
+// Lo que se mandó al colchón con el botón "Mandar lo que sobró al colchón" (ingresos marcados con la quincena que recibía lo sobrante).
+function enviadoDe(q) { var t = 0; S.ingresos.forEach(function (x) { if (x.sobrante === q) t += x.valor || 0; }); return t; }
 
 /* ---------- HOY ---------- */
 function renderHoy() {
@@ -95,7 +97,10 @@ function renderHoy() {
     $("detalleQ").innerHTML = L.filter(function (a) { return a[1]; }).map(function (a) { return '<div class="kv"><span>' + esc(a[0]) + '</span><span class="num">' + money(a[1]) + '</span></div>'; }).join("") +
       '<div class="kv tot"><span>Libre para comida, transporte y demás</span><span class="num">' + money(f.libre + e.arrastre) + '</span></div>' +
       (S.ajustes[q] != null ? '<p class="small muted">Usted corrigió lo libre de esta quincena a ' + money(S.ajustes[q]) + '.</p>' : '') +
-      (S.casinos[q] != null ? '<p class="small muted">Usted corrigió el casino de esta quincena a ' + money(S.casinos[q]) + '.</p>' : '');
+      (S.casinos[q] != null ? '<p class="small muted">Usted corrigió el casino de esta quincena a ' + money(S.casinos[q]) + '.</p>' : '') +
+      (esActual && e.arrastre > 0 ? '<button class="ghost" id="mandarColchon" type="button" style="width:100%;margin-top:10px">Mandar lo que sobró al colchón (' + money(e.arrastre) + ')</button>' +
+        '<p class="small muted">Se anota en Ingresos como "Colchón y deudas": va al colchón hasta la meta y después a deudas. En diciembre la prima solo pone lo que falte.</p>' : '') +
+      (enviadoDe(q) ? '<p class="small muted">Mandó ' + money(enviadoDe(q)) + ' de lo que sobró al colchón. Si fue un error, bórrelo en Ingresos.</p>' : '');
   }
   var G = $("listaGastos");
   if (!lista.length) G.innerHTML = '<div class="empty">Aún no hay gastos anotados en esta quincena.</div>';
@@ -293,6 +298,12 @@ $("fGasto").addEventListener("submit", function (e) { e.preventDefault();
   nuevoGasto({ fecha: f, categoria: $("gCat").value, descripcion: $("gDesc").value.trim(), valor: v, medio: medio }).then(function (g) { $("gValor").value = ""; $("gDesc").value = "";
     msg.textContent = "Guardado: " + money(v) + (g.quincena !== S.q ? " (quedó en el pago del " + corto(g.quincena) + ")" : ""); renderHoy(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
+});
+$("detalleQ").addEventListener("click", function (ev) {
+  var b = ev.target.closest("#mandarColchon"), q = S.q, e = estadoQ(q); if (!b || !e || !(e.arrastre > 0)) return;
+  var hoy = hoyISO(), x = { id: Almacen.nuevoId(), fecha: hoy, quincena: quincenaDe(hoy), origen: "Lo que sobró de la quincena", destino: "deudas", valor: e.arrastre, sobrante: q, creado: new Date().toISOString() };
+  b.disabled = true;
+  guardar("ingresos", x).then(function () { S.ingresos.push(x); recalcular(); render(); }).catch(function () { b.disabled = false; });
 });
 $("fIng").addEventListener("submit", function (e) { e.preventDefault();
   var v = num($("iValor").value), f = $("iFecha").value; if (!v || !f) return;
