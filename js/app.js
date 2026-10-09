@@ -4,12 +4,12 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.14";
+var VERSION_APP = "3.15";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe, diaPago = Motor.diaPago;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
 var CAMPOS = [
-  ["Nómina (cada quincena)", [["sueldo", "Sueldo quincenal"], ["salud", "Aporte de salud"], ["pension", "Aporte de pensión"], ["casino", "Casino"], ["aporte", "Aporte"], ["occ", "Libranza Occidente"], ["dav10", "Libranza Davivienda el día 10"], ["dav25", "Libranza Davivienda el día 25"], ["prima", "Prima de servicios estimada"]]],
+  ["Nómina (cada quincena)", [["sueldo", "Sueldo quincenal"], ["salud", "Aporte de salud"], ["pension", "Aporte de pensión"], ["casino", "Casino"], ["aporte", "Aporte (solo el 25)"], ["occ", "Libranza Occidente"], ["dav10", "Libranza Davivienda el día 10"], ["dav25", "Libranza Davivienda el día 25"], ["prima", "Prima de servicios estimada"]]],
   ["Gastos fijos del mes", [["arriendo", "Arriendo"], ["internet", "Internet"], ["datos", "Datos del celular"], ["icloud", "iCloud+ (día 10)"], ["youtube", "YouTube Premium (día 3)"], ["segsalud", "Seguro de salud"], ["seghogar", "Seguro de hogar"], ["cadena", "Cadena"]]],
   ["Tarjeta Davibank", [["c_ago", "Cuota compra de agosto (0 %)"], ["c_mp", "Cuota Mercado Pago (hasta nov.)"], ["c_mahak", "Cuota Mahak (hasta nov.)"], ["c_apple_cap", "Apple: capital al mes"], ["c_apple_int", "Apple: interés al mes"], ["c_manejo", "Cuota de manejo y seguro"], ["card_saldo", "Saldo al 2 oct 2026"], ["apple_saldo", "Saldo de Apple"], ["tarjeta_primera", "Pago de octubre de 2026"]]],
   ["Deudas y plan", [["occ_saldo", "Saldo Occidente al 2 oct 2026"], ["occ_ea", "Tasa Occidente, efectiva anual", "%"], ["occ_seg", "Occidente: seguros en la cuota"], ["dav_saldo", "Saldo Davivienda al 2 oct 2026"], ["dav_tasa", "Tasa Davivienda, mensual", "%"], ["dav_plazo", "Plazo Davivienda (cuotas)", "n"], ["primo", "Deuda con el primo"], ["meta", "Meta de colchón"], ["pct", "Parte de lo liberado que abona", "%"]]],
@@ -34,8 +34,8 @@ function anteriorQ(q) { var d = parse(q); return d.getDate() === 25 ? iso(new Da
 function esMovil() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
 
 /* ---------- estado en memoria ---------- */
-var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, despensa: [], recetas: [], menu: [], freidora: [] };
-function recalcular() { S.calc = S.P ? Motor.calcular(S.P, S.ingresos) : null; }
+var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, casinos: {}, despensa: [], recetas: [], menu: [], freidora: [] };
+function recalcular() { S.calc = S.P ? Motor.calcular(S.P, S.ingresos, S.casinos) : null; }
 function filaQ(q) { return S.calc ? S.calc.porFecha[q] : null; }
 function gastosDe(q) { return S.gastos.filter(function (g) { return g.quincena === q; }); }
 function estadoQ(q) { // lo libre, lo gastado y el saldo de una quincena
@@ -53,6 +53,9 @@ function renderHoy() {
   $("qHoy").hidden = (q === actual);
   $("aLab").firstChild.textContent = "Libre del pago del " + corto(q) + " ";
   if (document.activeElement !== $("aLibre")) $("aLibre").value = S.ajustes[q] != null ? money(S.ajustes[q]) : "";
+  $("cLab").firstChild.textContent = "Casino del pago del " + corto(q) + " ";
+  if (document.activeElement !== $("cCasino")) $("cCasino").value = S.casinos[q] != null ? money(S.casinos[q]) : "";
+  $("cCasino").placeholder = S.P ? money(S.P.casino || 0) : "$ 0";
   $("bienvenida").hidden = !(S.lista && !S.P);
   var dsr = diasSinRespaldo(), nr = $("notaRespaldo"); nr.hidden = !(S.P && (dsr === null || dsr >= 15));
   nr.textContent = dsr === null ? "Aún no ha guardado un respaldo de sus datos. Guardar respaldo ›" : "Hace " + dsr + " días que no guarda un respaldo. Guardar respaldo ›";
@@ -81,7 +84,8 @@ function renderHoy() {
       ["Abono extra a deudas", -f.abono], ["Para el colchón", -f.colchon], ["Guarda para la quincena siguiente", -f.aparta]]);
     $("detalleQ").innerHTML = L.filter(function (a) { return a[1]; }).map(function (a) { return '<div class="kv"><span>' + esc(a[0]) + '</span><span class="num">' + money(a[1]) + '</span></div>'; }).join("") +
       '<div class="kv tot"><span>Libre para comida, transporte y demás</span><span class="num">' + money(f.libre) + '</span></div>' +
-      (S.ajustes[q] != null ? '<p class="small muted">Usted corrigió lo libre de esta quincena a ' + money(S.ajustes[q]) + '.</p>' : '');
+      (S.ajustes[q] != null ? '<p class="small muted">Usted corrigió lo libre de esta quincena a ' + money(S.ajustes[q]) + '.</p>' : '') +
+      (S.casinos[q] != null ? '<p class="small muted">Usted corrigió el casino de esta quincena a ' + money(S.casinos[q]) + '.</p>' : '');
   }
   var G = $("listaGastos");
   if (!lista.length) G.innerHTML = '<div class="empty">Aún no hay gastos anotados en esta quincena.</div>';
@@ -99,16 +103,21 @@ function estadoPago(p, hoy) {
   var d = dias(hoy, p.fecha);
   if (d < 0) return { t: "Vencido hace " + (-d) + " día(s)", c: "bad", alerta: true };
   if (d === 0) return { t: "Vence hoy", c: "bad", alerta: true };
-  if (d <= (p.aviso || 3)) return { t: "Vence en " + d + " día(s)", c: "warn", alerta: true };
+  if (d <= (p.aviso != null ? p.aviso : 3)) return { t: "Vence en " + d + " día(s)", c: "warn", alerta: true };
   return { t: "Pendiente", c: "plain", alerta: false };
 }
-function pagosEnAlerta() { var hoy = hoyISO(); return (S.calc ? S.calc.pagos : []).filter(function (p) { return estadoPago(p, hoy).alerta; }); }
+// Recordatorio de separar la plata que se aparta para la quincena siguiente, el día en que llega el pago. Solo la quincena actual y las que vienen.
+function pagosGuardar() { if (!S.calc) return []; var actual = quincenaDe(hoyISO());
+  return S.calc.quincenas.filter(function (q) { return q.fecha >= actual && q.aparta > 0; }).map(function (q) {
+    return { id: "guardar-" + q.fecha, nombre: "Guardar para el pago del " + corto(siguientePago(q.fecha)), fecha: diaPago(q.fecha), valor: q.aparta, aviso: 0 }; }); }
+function listaPagos() { return S.calc ? S.calc.pagos.concat(pagosGuardar()).sort(function (a, b) { return a.fecha.localeCompare(b.fecha); }) : []; }
+function pagosEnAlerta() { var hoy = hoyISO(); return listaPagos().filter(function (p) { return estadoPago(p, hoy).alerta; }); }
 function filaPago(p, hoy) { var e = estadoPago(p, hoy), ok = !!S.hechos[p.id];
   return '<div class="item"><button class="check" aria-pressed="' + ok + '" data-pago="' + esc(p.id) + '" aria-label="Marcar ' + esc(p.nombre) + ' como ' + (ok ? 'no pagado' : 'pagado') + '">' + (ok ? '✓' : '') + '</button>' +
     '<div class="tx"><b>' + esc(p.nombre) + '</b><span>' + esc(corto(p.fecha)) + ' · ' + money(p.valor) + '</span></div><span class="pill ' + e.c + '">' + esc(e.t) + '</span></div>'; }
 function renderPagos() {
   var hoy = hoyISO(), d = new Date(), m0 = iso(new Date(d.getFullYear(), d.getMonth(), 1)).slice(0, 7), m1 = iso(new Date(d.getFullYear(), d.getMonth() + 1, 1)).slice(0, 7);
-  var lista = S.calc ? S.calc.pagos : [], al = pagosEnAlerta(), mes = [], sig = [];
+  var lista = listaPagos(), al = pagosEnAlerta(), mes = [], sig = [];
   lista.forEach(function (p) { if (p.fecha.slice(0, 7) === m0) mes.push(p); if (p.fecha.slice(0, 7) === m1) sig.push(p); });
   var vacio = '<div class="empty">Nada por aquí.</div>';
   $("pgAlerta").innerHTML = al.length ? al.map(function (p) { return filaPago(p, hoy); }).join("") : '<div class="empty">No tiene pagos vencidos ni por vencer.</div>';
@@ -177,7 +186,7 @@ function mesLargo(k) { return k ? Motor.mesTxt(k) : ""; }
 function impactoFijos(cuantas) {
   if (!S.P || !(S.P.fijosExtra || []).length || !S.calc) return [];
   var sin = JSON.parse(JSON.stringify(S.P)); sin.fijosExtra = [];
-  var base = Motor.calcular(sin, S.ingresos).porFecha, actual = quincenaDe(hoyISO());
+  var base = Motor.calcular(sin, S.ingresos, S.casinos).porFecha, actual = quincenaDe(hoyISO());
   return S.calc.quincenas.filter(function (q) { return q.fecha >= actual; }).slice(0, cuantas)
     .map(function (q) { return { fecha: q.fecha, sin: base[q.fecha].libre, con: q.libre, dif: q.libre - base[q.fecha].libre }; });
 }
@@ -208,7 +217,9 @@ function aplicar(todo) { // pasa lo leído del almacén a la memoria
   S.freidora = (todo.freidora || []).filter(vivo);
   S.ingresos = (todo.ingresos || []).filter(vivo).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
   S.hechos = {}; (todo.pagosHechos || []).filter(vivo).forEach(function (x) { S.hechos[x.id] = true; });
-  S.ajustes = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) { if (typeof x.libre === "number") S.ajustes[x.id] = x.libre; });
+  S.ajustes = {}; S.casinos = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) {
+    if (typeof x.libre === "number") S.ajustes[x.id] = x.libre;
+    else if (typeof x.casino === "number" && x.id.indexOf("casino-") === 0) S.casinos[x.id.slice(7)] = x.casino; });
   S.lista = true; recalcular(); render();
 }
 /* Todo cambio pasa por estas dos funciones: le ponen fecha de modificación (`mod`), lo guardan en el dispositivo y lo envían a la nube si hay sesión.
@@ -222,7 +233,7 @@ function guardarDatos(P) { return guardar("config", { id: "datos", valores: P })
 
 /* ---------- acciones ---------- */
 function fmtInput(el) { el.addEventListener("input", function () { var n = num(el.value); el.value = n ? money(n) : ""; }); }
-["gValor", "iValor", "aLibre", "fValor", "mValor"].forEach(function (id) { fmtInput($(id)); });
+["gValor", "iValor", "aLibre", "cCasino", "fValor", "mValor"].forEach(function (id) { fmtInput($(id)); });
 $("fDesde").value = hoyISO().slice(0, 7);
 $("camposDatos").addEventListener("change", function (e) { var el = e.target; if (el.dataset && el.dataset.t === "$") el.value = money(num(el.value)); });
 $("gCat").innerHTML = CATS.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("");
@@ -285,6 +296,13 @@ $("fAj").addEventListener("submit", function (e) { e.preventDefault();
   (txt === "" ? eliminar("ajustes", q) : guardar("ajustes", { id: q, libre: num(txt) }))
     .then(function () { if (txt === "") delete S.ajustes[q]; else S.ajustes[q] = num(txt);
       msg.textContent = txt === "" ? "Listo: esta quincena vuelve al cálculo normal." : "Listo: lo libre de esta quincena quedó en " + money(num(txt)) + "."; renderHoy(); renderPlan(); })
+    .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
+});
+$("fCasino").addEventListener("submit", function (e) { e.preventDefault();
+  var txt = $("cCasino").value.trim(), btn = $("cBtn"), msg = $("cMsg"), q = S.q; btn.disabled = true;
+  (txt === "" ? eliminar("ajustes", "casino-" + q) : guardar("ajustes", { id: "casino-" + q, casino: num(txt) }))
+    .then(function () { if (txt === "") delete S.casinos[q]; else S.casinos[q] = num(txt); recalcular();
+      msg.textContent = txt === "" ? "Listo: esta quincena usa otra vez el casino de Mis datos." : "Listo: el casino de esta quincena quedó en " + money(num(txt)) + "."; render(); })
     .catch(function () { fallo(msg); }).then(function () { btn.disabled = false; });
 });
 $("fDatos").addEventListener("submit", function (e) { e.preventDefault(); if (!S.P) return;
@@ -386,7 +404,7 @@ $("crearCal").addEventListener("click", function () {
 });
 
 /* ---------- respaldo ---------- */
-function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, despensa: S.despensa, recetas: S.recetas, menu: S.menu, freidora: S.freidora }; }
+function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, casinos: S.casinos, despensa: S.despensa, recetas: S.recetas, menu: S.menu, freidora: S.freidora }; }
 $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
   if (!S.P) { msg.textContent = "Aún no hay datos para respaldar."; return; }
   entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1))
@@ -395,12 +413,13 @@ $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
 function leerRespaldo(texto) { // valida el archivo y lo convierte al formato del almacén
   var r = JSON.parse(texto);
   if (!r || r.app !== "mis-quincenas" || !r.datos || typeof r.datos !== "object") throw new Error("formato");
-  var aj = r.ajustes || {};
+  var aj = r.ajustes || {}, cas = r.casinos || {};
   return { config: [{ id: "datos", valores: r.datos }],
     gastos: (r.gastos || []).filter(function (g) { return g && g.id && g.fecha && typeof g.valor === "number"; }),
     ingresos: (r.ingresos || []).filter(function (x) { return x && x.id && x.fecha && typeof x.valor === "number"; }),
     pagosHechos: (r.pagosHechos || []).map(function (id) { return { id: String(id) }; }),
-    ajustes: Object.keys(aj).filter(function (k) { return typeof aj[k] === "number"; }).map(function (k) { return { id: k, libre: aj[k] }; }),
+    ajustes: Object.keys(aj).filter(function (k) { return typeof aj[k] === "number"; }).map(function (k) { return { id: k, libre: aj[k] }; })
+      .concat(Object.keys(cas).filter(function (k) { return typeof cas[k] === "number"; }).map(function (k) { return { id: "casino-" + k, casino: cas[k] }; })),
     despensa: (r.despensa || []).filter(function (x) { return x && x.id && x.nombre; }),
     recetas: (r.recetas || []).filter(function (x) { return x && x.id && x.nombre; }),
     menu: (r.menu || []).filter(function (x) { return x && x.id; }),
@@ -427,6 +446,7 @@ $("archivoResp").addEventListener("change", function () {
     S.ingresos.forEach(function (x) { if (!i[x.id]) todo.ingresos.push({ id: x.id, borrado: true, mod: m }); });
     Object.keys(S.hechos).forEach(function (id) { if (!p[id]) todo.pagosHechos.push({ id: id, borrado: true, mod: m }); });
     Object.keys(S.ajustes).forEach(function (id) { if (!a[id]) todo.ajustes.push({ id: id, borrado: true, mod: m }); });
+    Object.keys(S.casinos).forEach(function (q) { if (!a["casino-" + q]) todo.ajustes.push({ id: "casino-" + q, borrado: true, mod: m }); });
     ["despensa", "recetas", "menu", "freidora"].forEach(function (k) { var hay = enResp(k); S[k].forEach(function (x) { if (!hay[x.id]) todo[k].push({ id: x.id, borrado: true, mod: m }); }); });
     return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo); marcarRespaldo(); if (window.Nube) Nube.sincronizar();
       todo.gastos = todo.gastos.filter(vivo); todo.ingresos = todo.ingresos.filter(vivo);

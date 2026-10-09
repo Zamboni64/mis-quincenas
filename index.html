@@ -438,6 +438,18 @@
     </div>
 
     <div class="card">
+      <h2>Corregir el casino de una quincena</h2>
+      <p class="small muted" style="margin-bottom:10px">Escriba lo que de verdad le cobraron de casino. La diferencia se suma o se resta de lo libre de la quincena que tiene abierta en "Hoy"; lo que se aparta para la siguiente no cambia. Déjelo vacío para usar el valor de Mis datos.</p>
+      <form id="fCasino">
+        <div class="row2">
+          <label id="cLab">Casino <input id="cCasino" inputmode="numeric"></label>
+          <button class="primary" id="cBtn" type="submit" style="align-self:end">Guardar</button>
+        </div>
+        <div class="small muted" id="cMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
       <h2>Otros gastos fijos</h2>
       <p class="small muted" style="margin-bottom:8px">Para un gasto mensual nuevo, como una suscripción. Se descuenta de lo libre de la quincena que corresponda desde el mes que indique.</p>
       <div class="list" id="listaFijos"><div class="empty">No ha agregado gastos fijos.</div></div>

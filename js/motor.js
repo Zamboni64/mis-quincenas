@@ -82,7 +82,7 @@ function extrasDe(P,dt,is10,first){
   return out}
 
 /* Quincenas: qué entra, qué sale, cuánto se guarda para la otra quincena y cuánto queda libre. */
-function quincenas(P,ingresos,R,PL){
+function quincenas(P,ingresos,R,PL,casinos){
   var pct=(P.pct==null?1:n(P.pct)),fechas=[FIRST],y,m;
   for(y=2026,m=10;y<=FIN_Y;){fechas.push(mk(y,m,10),mk(y,m,25));m++;if(m>12){m=1;y++}}
   var extraQ={};ingresos.forEach(function(x){if(x.destino!=="deudas"){var q=quincenaDe(x.fecha);extraQ[q]=(extraQ[q]||0)+n(x.valor)}});
@@ -91,7 +91,7 @@ function quincenas(P,ingresos,R,PL){
     var is10=dt.slice(8)==="10",key=ym(dt),first=dt===FIRST,yr=+dt.slice(0,4),mth=+dt.slice(5,7);
     var o={fecha:dt,sueldo:0,salud:0,pension:0,casino:0,aporte:0,occ:0,dav:0,prima:0,extra:extraQ[dt]||0,reserva:0,
       arriendo:0,internet:0,datos:0,icloud:0,youtube:0,tarjeta:0,segsalud:0,seghogar:0,cadena:0,otros:0,otrosDetalle:[],primo:0,apple:0,abono:0,colchon:0,aparta:0};
-    if(!first){o.sueldo=n(P.sueldo);o.salud=n(P.salud);o.pension=n(P.pension);o.casino=n(P.casino);o.aporte=n(P.aporte);
+    if(!first){o.sueldo=n(P.sueldo);o.salud=n(P.salud);o.pension=n(P.pension);o.casino=n(P.casino);o.aporte=is10?0:n(P.aporte);
       o.occ=dt<=PL.occLast?n(P.occ):0;o.dav=dt<=PL.davLast?n(is10?P.dav10:P.dav25):0}
     o.neto=o.sueldo-o.salud-o.pension-o.casino-o.aporte-o.occ-o.dav;
     var primaCol=dt==="2026-12-10",primaAb=yr>=2027&&((mth===6&&!is10)||(mth===12&&is10));
@@ -109,7 +109,9 @@ function quincenas(P,ingresos,R,PL){
     if(i<filas.length-1){var s=filas[i+1];
       o.aparta=mround(Math.max(0,((o.neto+o.prima+o.reserva-o.salidas)-(s.neto+s.prima-s.salidas))/2),n(P.redondeo)||5000)}
     o.totalSale=o.salidas+o.aparta;
-    o.libre=o.neto+o.prima+o.extra+o.reserva-o.totalSale});
+    o.libre=o.neto+o.prima+o.extra+o.reserva-o.totalSale;
+    // Casino corregido a mano para esta quincena: la diferencia queda en lo libre de esta quincena y no cambia lo que se aparta.
+    if(o.sueldo&&casinos&&casinos[o.fecha]!=null){var dif=o.casino-n(casinos[o.fecha]);o.casino=n(casinos[o.fecha]);o.neto+=dif;o.libre+=dif}});
   var porFecha={};filas.forEach(function(o){porFecha[o.fecha]=o});
   return {filas:filas,porFecha:porFecha}}
 
@@ -128,8 +130,8 @@ function pagos(P){
     m++;if(m>12){m=1;y++}}
   return out.sort(function(a,b){return a.fecha.localeCompare(b.fecha)})}
 
-function calcular(P,ingresos){
-  ingresos=ingresos||[];var R=reparto(P,ingresos),PL=plan(P,R),Q=quincenas(P,ingresos,R,PL);
+function calcular(P,ingresos,casinos){
+  ingresos=ingresos||[];var R=reparto(P,ingresos),PL=plan(P,R),Q=quincenas(P,ingresos,R,PL,casinos);
   return {reparto:R,plan:PL,quincenas:Q.filas,porFecha:Q.porFecha,pagos:pagos(P)}}
 
 /* Libro de Excel con toda la información (valores, sin fórmulas). Devuelve los bytes del .xlsx. */

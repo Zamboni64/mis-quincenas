@@ -101,6 +101,12 @@ Con esas reglas, cada cuenta solo puede leer y escribir sus propios datos.
 
 Cada quincena empieza el día en que llega el pago: el 10 y el 25 de cada mes. Si uno de esos días cae en sábado o domingo, la quincena empieza el viernes antes, que es cuando pagan. Los gastos y la plata que entra desde ese viernes cuentan para la quincena nueva. Los festivos no se tienen en cuenta.
 
+## Descuentos de nómina y ahorro entre quincenas
+
+- El aporte de Mis datos se resta solo en la quincena del 25. Lo demás de la nómina se resta en las dos.
+- **Más → Corregir el casino de una quincena**: se escribe lo que de verdad cobraron de casino en la quincena abierta en "Hoy". La diferencia se suma o se resta de lo libre de esa quincena y no cambia lo que se aparta para la siguiente. Vacío = vuelve al valor de Mis datos. Va en el respaldo.
+- En **Pagos** aparece "Guardar para el pago del…" el día en que llega cada pago que tiene plata por apartar, para marcarlo cuando la separe. Es solo un recordatorio: no cambia las cuentas ni sale en el Excel.
+
 ## Respaldo
 
 En la pestaña **Más → Respaldo**, "Guardar respaldo" crea un archivo `.json` con todo; guárdelo en Archivos o en iCloud Drive. "Restaurar un respaldo" reemplaza lo que haya en la app por lo que trae el archivo.
