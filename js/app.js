@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.15";
+var VERSION_APP = "3.16";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe, diaPago = Motor.diaPago;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -41,8 +41,18 @@ function gastosDe(q) { return S.gastos.filter(function (g) { return g.quincena =
 function estadoQ(q) { // lo libre, lo gastado y el saldo de una quincena
   var f = filaQ(q); if (!f) return null;
   var gastado = 0; gastosDe(q).forEach(function (g) { gastado += g.valor || 0; });
-  var base = S.ajustes[q] != null ? S.ajustes[q] : f.libre - f.extra;
-  return { fila: f, base: base, extra: f.extra, disponible: base + f.extra, gastado: gastado, saldo: base + f.extra - gastado };
+  var base = S.ajustes[q] != null ? S.ajustes[q] : f.libre - f.extra, arr = arrastreDe(q);
+  return { fila: f, base: base, extra: f.extra, arrastre: arr, disponible: base + f.extra + arr, gastado: gastado, saldo: base + f.extra + arr - gastado };
+}
+// Lo que sobró (o faltó, si se pasó) de la quincena anterior y pasa a la quincena q. Solo de quincenas que ya terminaron; se va encadenando.
+function arrastreDe(q) {
+  var rows = S.calc ? S.calc.quincenas : [], actual = quincenaDe(hoyISO()), a = 0;
+  for (var i = 1; i < rows.length && rows[i].fecha <= q; i++) {
+    var p = rows[i - 1], g = 0; if (p.fecha >= actual) return 0;
+    gastosDe(p.fecha).forEach(function (x) { g += x.valor || 0; });
+    a = (S.ajustes[p.fecha] != null ? S.ajustes[p.fecha] : p.libre - p.extra) + p.extra + a - g;
+  }
+  return a;
 }
 
 /* ---------- HOY ---------- */
@@ -76,14 +86,14 @@ function renderHoy() {
     $("stLibre").textContent = money(e.base); $("stExtra").textContent = money(e.extra); $("stGasto").textContent = money(e.gastado);
     var ap = $("notaAparta");
     if (f.aparta > 0) { ap.hidden = false; ap.textContent = "De este pago guarde " + money(f.aparta) + " para la quincena siguiente. Ya está descontado de lo libre."; } else ap.hidden = true;
-    var L = [["Neto que recibe", f.neto], ["Prima", f.prima], ["Ingresos extra para gastar", f.extra], ["Trae guardado de la quincena anterior", f.reserva],
+    var L = [["Neto que recibe", f.neto], ["Prima", f.prima], ["Ingresos extra para gastar", f.extra], ["Trae guardado de la quincena anterior", f.reserva], [e.arrastre < 0 ? "Se pasó en la quincena anterior" : "Le sobró de la quincena anterior", e.arrastre],
       ["Arriendo", -f.arriendo], ["Internet", -f.internet], ["Datos del celular", -f.datos], ["iCloud+", -f.icloud], ["YouTube Premium", -f.youtube], ["Tarjeta Davibank", -f.tarjeta],
       ["Seguro de salud", -f.segsalud], ["Seguro de hogar", -f.seghogar], ["Cadena", -f.cadena]]
       .concat((f.otrosDetalle || []).map(function (x) { return [x.nombre, -x.valor]; }))
       .concat([["Pago al primo", -f.primo], ["Apple a una cuota", -f.apple],
       ["Abono extra a deudas", -f.abono], ["Para el colchón", -f.colchon], ["Guarda para la quincena siguiente", -f.aparta]]);
     $("detalleQ").innerHTML = L.filter(function (a) { return a[1]; }).map(function (a) { return '<div class="kv"><span>' + esc(a[0]) + '</span><span class="num">' + money(a[1]) + '</span></div>'; }).join("") +
-      '<div class="kv tot"><span>Libre para comida, transporte y demás</span><span class="num">' + money(f.libre) + '</span></div>' +
+      '<div class="kv tot"><span>Libre para comida, transporte y demás</span><span class="num">' + money(f.libre + e.arrastre) + '</span></div>' +
       (S.ajustes[q] != null ? '<p class="small muted">Usted corrigió lo libre de esta quincena a ' + money(S.ajustes[q]) + '.</p>' : '') +
       (S.casinos[q] != null ? '<p class="small muted">Usted corrigió el casino de esta quincena a ' + money(S.casinos[q]) + '.</p>' : '');
   }
@@ -168,7 +178,7 @@ function renderPlan() {
     filas.map(function (f) { return '<tr><td>' + esc(Motor.mesTxt(f.mes)) + '</td><td>' + money(f.dav) + '</td><td>' + money(f.occ) + '</td><td>' + money(f.card) + '</td><td>' + money(f.primo) + '</td><td><b>' + money(f.total) + '</b></td><td>' + money(f.davAbono + f.occAbono) + '</td></tr>'; }).join("") + '</tbody></table>';
   var actual = quincenaDe(hoyISO()), qs = c.quincenas.filter(function (q) { return q.fecha >= actual; }).slice(0, 12);
   $("planQ").innerHTML = '<table class="num"><thead><tr><th>Pago</th><th>Recibe</th><th>Guarda</th><th>Libre</th></tr></thead><tbody>' +
-    qs.map(function (q) { return '<tr><td>' + esc(corto(q.fecha)) + " " + q.fecha.slice(2, 4) + '</td><td>' + money(q.neto + q.prima) + '</td><td>' + money(q.aparta) + '</td><td><b>' + money(S.ajustes[q.fecha] != null ? S.ajustes[q.fecha] + q.extra : q.libre) + '</b></td></tr>'; }).join("") + '</tbody></table>';
+    qs.map(function (q) { return '<tr><td>' + esc(corto(q.fecha)) + " " + q.fecha.slice(2, 4) + '</td><td>' + money(q.neto + q.prima) + '</td><td>' + money(q.aparta) + '</td><td><b>' + money((S.ajustes[q.fecha] != null ? S.ajustes[q.fecha] + q.extra : q.libre) + arrastreDe(q.fecha)) + '</b></td></tr>'; }).join("") + '</tbody></table>';
 }
 
 /* ---------- MÁS: mis datos ---------- */
@@ -386,7 +396,8 @@ $("exportar").addEventListener("click", function () {
   datos.push(["Exportado el", hoyISO(), ""]);
   var filasDespensa = S.despensa.slice().sort(function (a, b) { return a.nombre.localeCompare(b.nombre); }).map(function (it) {
     return { nombre: it.nombre, cantidad: Despensa.textoCantidad(it), minimo: it.tipo === "nivel" ? "La última en poco" : Despensa.cant(it.minimo) + " " + (Despensa.porPaq(it) ? (it.pieza || "porciones") : (it.unidad || "")), precio: it.precio || 0, alerta: Despensa.enAlerta(it) ? "Sí" : "" }; });
-  var bytes = Motor.construirLibro({ calc: S.calc, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos, despensa: filasDespensa });
+  var arrastre = {}; (S.calc ? S.calc.quincenas : []).forEach(function (q) { var a = arrastreDe(q.fecha); if (a) arrastre[q.fecha] = a; });
+  var bytes = Motor.construirLibro({ calc: S.calc, arrastre: arrastre, gastos: S.gastos, ingresos: S.ingresos, hechos: S.hechos, ajustes: S.ajustes, datos: datos, despensa: filasDespensa });
   entregar("mis-quincenas-" + hoyISO() + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes).then(msgEntrega(msg, "el Excel"), errEntrega(msg));
 });
 

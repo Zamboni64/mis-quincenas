@@ -105,6 +105,7 @@ Cada quincena empieza el día en que llega el pago: el 10 y el 25 de cada mes. S
 
 - El aporte de Mis datos se resta solo en la quincena del 25. Lo demás de la nómina se resta en las dos.
 - **Más → Corregir el casino de una quincena**: se escribe lo que de verdad cobraron de casino en la quincena abierta en "Hoy". La diferencia se suma o se resta de lo libre de esa quincena y no cambia lo que se aparta para la siguiente. Vacío = vuelve al valor de Mis datos. Va en el respaldo.
+- Lo que le quedó de una quincena que ya terminó (lo libre menos lo gastado) se suma a lo libre de la siguiente, como "Le sobró de la quincena anterior". Si se pasó, se resta ("Se pasó en la quincena anterior"). Se va encadenando y no cambia lo que se aparta.
 - En **Pagos** aparece "Guardar para el pago del…" el día en que llega cada pago que tiene plata por apartar, para marcarlo cuando la separe. Es solo un recordatorio: no cambia las cuentas ni sale en el Excel.
 
 ## Respaldo

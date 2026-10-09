@@ -159,13 +159,14 @@ function construirLibro(d){
   var hojas=[
    {nombre:"Quincenas",cols:[["Fecha de pago","fecha","f",13],["Sueldo","sueldo","$"],["Salud","salud","$"],["Pensión","pension","$"],["Casino","casino","$"],["Aporte","aporte","$"],
     ["Libranza Occidente","occ","$"],["Libranza Davivienda","dav","$"],["Neto que recibe","neto","$b"],["Prima","prima","$"],["Ingresos extra para gastar","extra","$"],
-    ["Reserva que trae de la quincena anterior","reserva","$"],["Arriendo","arriendo","$"],["Internet","internet","$"],["Datos celular","datos","$"],["iCloud+","icloud","$"],
+    ["Reserva que trae de la quincena anterior","reserva","$"],["Sobró (o faltó) de la quincena anterior","arrastre","$"],["Arriendo","arriendo","$"],["Internet","internet","$"],["Datos celular","datos","$"],["iCloud+","icloud","$"],
     ["YouTube Premium","youtube","$"],["Tarjeta Davibank","tarjeta","$"],["Seguro de salud","segsalud","$"],["Seguro de hogar","seghogar","$"],["Cadena","cadena","$"],["Otros gastos fijos","otros","$"],
     ["Pago al primo","primo","$"],["Apple a 1 cuota","apple","$"],["Abono extra a deudas","abono","$"],["Aparta para colchón","colchon","$"],
     ["Aparta para la quincena siguiente","aparta","$"],["Total que sale","totalSale","$"],["Libre para comida, transporte y demás","libre","$b",16],
     ["Gastado según su registro","gastado","$"],["Saldo que le queda","saldo","$b"]],
     filas:d.calc.quincenas.map(function(q){var o=Object.assign({},q);
       if(d.ajustes&&d.ajustes[q.fecha]!=null)o.libre=d.ajustes[q.fecha]+q.extra;
+      o.arrastre=(d.arrastre&&d.arrastre[q.fecha])||0;o.libre+=o.arrastre;
       o.gastado=gastoQ[q.fecha]||0;o.saldo=o.libre-o.gastado;return o})},
    {nombre:"Gastos",cols:[["Fecha","fecha","f",13],["Categoría","categoria","",26],["Descripción","descripcion","",44],["Valor","valor","$"],["Cómo pagó","medio","",18],["Quincena","quincena","f",13]],
     filas:d.gastos.slice().sort(function(a,b){return (a.fecha+(a.creado||"")).localeCompare(b.fecha+(b.creado||""))})
