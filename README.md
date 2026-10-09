@@ -97,6 +97,10 @@ Con esas reglas, cada cuenta solo puede leer y escribir sus propios datos.
 
 3. Después de crear su cuenta desde la app, puede desactivar el registro de cuentas nuevas en **Authentication → Configuración → Acciones del usuario**.
 
+## Días de pago
+
+Cada quincena empieza el día en que llega el pago: el 10 y el 25 de cada mes. Si uno de esos días cae en sábado o domingo, la quincena empieza el viernes antes, que es cuando pagan. Los gastos y la plata que entra desde ese viernes cuentan para la quincena nueva. Los festivos no se tienen en cuenta.
+
 ## Respaldo
 
 En la pestaña **Más → Respaldo**, "Guardar respaldo" crea un archivo `.json` con todo; guárdelo en Archivos o en iCloud Drive. "Restaurar un respaldo" reemplaza lo que haya en la app por lo que trae el archivo.

@@ -335,10 +335,10 @@ window.MQ.resumenExtra = lineasDespensa;
 $("cCopiar").addEventListener("click", function () {
   var msg = $("cCopMsg"), ta = $("cCopTxt"), L = lineasDespensa();
   if (!L.length) { msg.textContent = "Primero agregue alimentos a la despensa."; return; }
-  var hoy = A.hoyISO(), q = A.quincenaDe(hoy), sig = A.siguientePago(q), saldo = saldoQuincena(), faltan = Math.max(1, A.dias(hoy, sig));
+  var hoy = A.hoyISO(), q = A.quincenaDe(hoy), sig = A.siguientePago(q), saldo = saldoQuincena(), faltan = Math.max(1, A.dias(hoy, A.diaPago(sig)));
   var DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"], nDias = Math.min(7, faltan);
   var txt = ["Vivo solo y cocino para una persona. Hoy es " + DIAS[fechaLocal(hoy).getDay()] + " " + A.corto(hoy) + " (" + hoy + "). Los valores van en pesos colombianos."].concat(L);
-  if (saldo != null) txt.push("", "MI PRESUPUESTO", "- Me quedan " + money(saldo) + " para comida, transporte y todo lo demás hasta el pago del " + A.corto(sig) + " (" + faltan + " día(s)).");
+  if (saldo != null) txt.push("", "MI PRESUPUESTO", "- Me quedan " + money(saldo) + " para comida, transporte y todo lo demás hasta el pago del " + A.corto(A.diaPago(sig)) + " (" + faltan + " día(s)).");
   txt.push("", "LO QUE NECESITO",
     "Arma mi menú para " + (nDias === 1 ? "hoy" : "los próximos " + nDias + " días, empezando hoy") + " con desayuno, almuerzo y comida. Usa primero lo que ya tengo, que sean recetas sencillas, y que lo que haya que comprar no se pase de mi presupuesto." +
     (almuerzosFuera() ? " Los días que almuerzo fuera de casa (elige tú cuáles, entre semana), pon el almuerzo como \"fuera\"." : ""),

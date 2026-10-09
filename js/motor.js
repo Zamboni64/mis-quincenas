@@ -9,8 +9,13 @@ function n(v){return typeof v==="number"&&isFinite(v)?v:0}
 var FIRST="2026-09-25",FIN_Y=2028;
 var MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 function mesTxt(key){return MES[+key.slice(5,7)-1]+". "+key.slice(0,4)}
-function quincenaDe(s){var y=+s.slice(0,4),m=+s.slice(5,7),k=+s.slice(8,10);
-  if(k>=25)return mk(y,m,25);if(k>=10)return mk(y,m,10);return mk(y,m-1,25)}
+/* Día en que de verdad llega el pago de la quincena q: si el 10 o el 25 cae en sábado o domingo, se paga el viernes antes. */
+function diaPago(q){var x=new Date(+q.slice(0,4),+q.slice(5,7)-1,+q.slice(8,10)),w=x.getDay();
+  if(w===6)x.setDate(x.getDate()-1);else if(w===0)x.setDate(x.getDate()-2);
+  return mk(x.getFullYear(),x.getMonth()+1,x.getDate())}
+/* Quincena a la que pertenece una fecha. Empieza el día en que llega el pago, aunque sea el viernes antes del 10 o del 25. */
+function quincenaDe(s){var y=+s.slice(0,4),m=+s.slice(5,7);
+  if(s>=diaPago(mk(y,m,25)))return mk(y,m,25);if(s>=diaPago(mk(y,m,10)))return mk(y,m,10);return mk(y,m-1,25)}
 
 /* Cuota de la tarjeta que se paga con la quincena del 25 del mes `key` (AAAA-MM). */
 function cardCuota(P,key){
@@ -237,6 +242,6 @@ function construirCalendario(d){
   L.push("END:VCALENDAR");
   return {texto:L.join("\r\n")+"\r\n",eventos:n}}
 
-return {calcular:calcular,quincenaDe:quincenaDe,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro,construirCalendario:construirCalendario};
+return {calcular:calcular,quincenaDe:quincenaDe,diaPago:diaPago,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro,construirCalendario:construirCalendario};
 })();
 if(typeof module!=="undefined")module.exports=Motor;

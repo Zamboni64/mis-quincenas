@@ -4,8 +4,8 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.13";
-var MES = Motor.MES, quincenaDe = Motor.quincenaDe;
+var VERSION_APP = "3.14";
+var MES = Motor.MES, quincenaDe = Motor.quincenaDe, diaPago = Motor.diaPago;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
 var CAMPOS = [
@@ -64,11 +64,11 @@ function renderHoy() {
     $("heroBar").style.width = "0%"; $("detalleQ").innerHTML = '<div class="empty">Sin datos para esta quincena.</div>';
     $("notaAparta").hidden = true; ["stLibre", "stExtra", "stGasto"].forEach(function (id) { $(id).textContent = "–"; });
   } else {
-    var f = e.fila, esActual = (q === actual), total = dias(q, sig), faltan = esActual ? Math.max(1, dias(hoy, sig)) : total;
+    var f = e.fila, esActual = (q === actual), total = dias(diaPago(q), diaPago(sig)), faltan = esActual ? Math.max(1, dias(hoy, diaPago(sig))) : total;
     $("heroLab").textContent = esActual ? "Le queda en esta quincena" : "Saldo de esa quincena";
     $("heroBig").textContent = money(e.saldo); hero.classList.toggle("neg", e.saldo < 0);
-    $("heroSub").textContent = e.saldo < 0 ? ("Se pasó. Faltan " + faltan + " día(s) para el pago del " + corto(sig) + ".") :
-      (money(e.saldo / faltan) + " por día · " + (esActual ? "faltan " : "") + faltan + " día(s)" + (esActual ? " para el pago del " + corto(sig) : ""));
+    $("heroSub").textContent = e.saldo < 0 ? ("Se pasó. Faltan " + faltan + " día(s) para el pago del " + corto(diaPago(sig)) + ".") :
+      (money(e.saldo / faltan) + " por día · " + (esActual ? "faltan " : "") + faltan + " día(s)" + (esActual ? " para el pago del " + corto(diaPago(sig)) : ""));
     $("heroBar").style.width = (e.disponible > 0 ? Math.max(0, Math.min(100, 100 * e.saldo / e.disponible)) : 0) + "%";
     $("stLibre").textContent = money(e.base); $("stExtra").textContent = money(e.extra); $("stGasto").textContent = money(e.gastado);
     var ap = $("notaAparta");
@@ -465,7 +465,7 @@ window.MQ = {
   alEstadoNube: function (e) { renderSync(e); },
   alCambiarNube: function () { Almacen.cargarTodo().then(aplicar).catch(function () {}); },
   // Lo que otros archivos de la app pueden usar de este.
-  app: { S: S, $: $, esc: esc, money: money, num: num, hoyISO: hoyISO, quincenaDe: quincenaDe, siguientePago: siguientePago, corto: corto, dias: dias,
+  app: { S: S, $: $, esc: esc, money: money, num: num, hoyISO: hoyISO, quincenaDe: quincenaDe, siguientePago: siguientePago, diaPago: diaPago, corto: corto, dias: dias,
     estadoQ: estadoQ, guardar: guardar, guardarDatos: guardarDatos, eliminar: eliminar, nuevoGasto: nuevoGasto, irA: function (t) { irA(t); }, render: function () { render(); },
     fmtInput: fmtInput, segmento: segmento, nuevoId: Almacen.nuevoId, registrarRender: function (f) { rendersExtra.push(f); } },
   resumenExtra: null
@@ -474,11 +474,11 @@ window.MQ = {
 /* ---------- resumen para preguntarle a Claude ---------- */
 function armarResumen() {
   var hoy = hoyISO(), actual = quincenaDe(hoy), e = estadoQ(actual), sig = siguientePago(actual), L = [];
-  L.push("Este es el resumen de mis finanzas personales al " + corto(hoy) + " de " + parse(hoy).getFullYear() + " (pesos colombianos). Me pagan los días 10 y 25.");
-  if (e) { var faltan = Math.max(1, dias(hoy, sig));
+  L.push("Este es el resumen de mis finanzas personales al " + corto(hoy) + " de " + parse(hoy).getFullYear() + " (pesos colombianos). Me pagan los días 10 y 25 (si caen en fin de semana, el viernes antes).");
+  if (e) { var faltan = Math.max(1, dias(hoy, diaPago(sig)));
     L.push("", "QUINCENA ACTUAL (pago del " + corto(actual) + ")",
       "- Libre para comida, transporte y demás: " + money(e.disponible) + (e.extra ? " (incluye " + money(e.extra) + " de ingresos extra)" : ""),
-      "- Gastado hasta hoy: " + money(e.gastado), "- Me queda: " + money(e.saldo) + ", unos " + money(e.saldo / faltan) + " por día durante " + faltan + " día(s), hasta el pago del " + corto(sig));
+      "- Gastado hasta hoy: " + money(e.gastado), "- Me queda: " + money(e.saldo) + ", unos " + money(e.saldo / faltan) + " por día durante " + faltan + " día(s), hasta el pago del " + corto(diaPago(sig)));
     if (e.fila.aparta > 0) L.push("- De este pago debo guardar " + money(e.fila.aparta) + " para la quincena siguiente (ya descontado)");
     var tot = {}; gastosDe(actual).forEach(function (g) { tot[g.categoria] = (tot[g.categoria] || 0) + g.valor; });
     Object.keys(tot).sort(function (a, b) { return tot[b] - tot[a]; }).forEach(function (k) { L.push("  · " + k + ": " + money(tot[k])); }); }
