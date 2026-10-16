@@ -450,6 +450,18 @@
     </div>
 
     <div class="card">
+      <h2>Lo que apartó de verdad</h2>
+      <p class="small muted" style="margin-bottom:10px">Si de la quincena que tiene abierta en "Hoy" apartó una cantidad distinta a la que dice la app, escríbala aquí. Lo libre de esta quincena y lo que recibe la siguiente quedan con ese valor. Déjelo vacío para volver al cálculo de la app.</p>
+      <form id="fApartado">
+        <div class="row2">
+          <label id="apLab">Apartó <input id="apValor" inputmode="numeric"></label>
+          <button class="primary" id="apBtn" type="submit" style="align-self:end">Guardar</button>
+        </div>
+        <div class="small muted" id="apMsg" role="status"></div>
+      </form>
+    </div>
+
+    <div class="card">
       <h2>Otros gastos fijos</h2>
       <p class="small muted" style="margin-bottom:8px">Para un gasto mensual nuevo, como una suscripción. Se descuenta de lo libre de la quincena que corresponda desde el mes que indique.</p>
       <div class="list" id="listaFijos"><div class="empty">No ha agregado gastos fijos.</div></div>

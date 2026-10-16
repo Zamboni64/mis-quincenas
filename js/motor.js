@@ -82,7 +82,7 @@ function extrasDe(P,dt,is10,first){
   return out}
 
 /* Quincenas: qué entra, qué sale, cuánto se guarda para la otra quincena y cuánto queda libre. */
-function quincenas(P,ingresos,R,PL,casinos){
+function quincenas(P,ingresos,R,PL,casinos,apartados){
   var pct=(P.pct==null?1:n(P.pct)),fechas=[FIRST],y,m;
   for(y=2026,m=10;y<=FIN_Y;){fechas.push(mk(y,m,10),mk(y,m,25));m++;if(m>12){m=1;y++}}
   var extraQ={};ingresos.forEach(function(x){if(x.destino!=="deudas"){var q=quincenaDe(x.fecha);extraQ[q]=(extraQ[q]||0)+n(x.valor)}});
@@ -107,7 +107,9 @@ function quincenas(P,ingresos,R,PL,casinos){
   filas.forEach(function(o,i){
     o.reserva=i===0?n(P.saldo_hoy):filas[i-1].aparta;
     if(i<filas.length-1){var s=filas[i+1];
-      o.aparta=mround(Math.max(0,((o.neto+o.prima+o.reserva-o.salidas)-(s.neto+s.prima-s.salidas))/2),n(P.redondeo)||5000)}
+      o.aparta=mround(Math.max(0,((o.neto+o.prima+o.reserva-o.salidas)-(s.neto+s.prima-s.salidas))/2),n(P.redondeo)||5000);
+      // Lo que de verdad apartó en esta quincena, escrito a mano: se usa en vez del cálculo y es lo que recibe la siguiente.
+      if(apartados&&apartados[o.fecha]!=null)o.aparta=n(apartados[o.fecha])}
     o.totalSale=o.salidas+o.aparta;
     o.libre=o.neto+o.prima+o.extra+o.reserva-o.totalSale;
     // Casino corregido a mano para esta quincena: la diferencia queda en lo libre de esta quincena y no cambia lo que se aparta.
@@ -130,8 +132,8 @@ function pagos(P){
     m++;if(m>12){m=1;y++}}
   return out.sort(function(a,b){return a.fecha.localeCompare(b.fecha)})}
 
-function calcular(P,ingresos,casinos){
-  ingresos=ingresos||[];var R=reparto(P,ingresos),PL=plan(P,R),Q=quincenas(P,ingresos,R,PL,casinos);
+function calcular(P,ingresos,casinos,apartados){
+  ingresos=ingresos||[];var R=reparto(P,ingresos),PL=plan(P,R),Q=quincenas(P,ingresos,R,PL,casinos,apartados);
   return {reparto:R,plan:PL,quincenas:Q.filas,porFecha:Q.porFecha,pagos:pagos(P)}}
 
 /* Libro de Excel con toda la información (valores, sin fórmulas). Devuelve los bytes del .xlsx. */
