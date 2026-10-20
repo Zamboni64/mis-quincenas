@@ -51,7 +51,7 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 - [x] Revisar que nada se salga de la pantalla a 320 px.
 
 ### Grupo 3 · Tabla del plan · Gemini · CSS · prioridad media
-- [ ] Borde y sombra en la columna "Mes", que queda fija, y una señal de que la tabla sigue hacia la derecha (4.1).
+- [x] Borde y sombra en la columna "Mes", que queda fija, y una señal de que la tabla sigue hacia la derecha (4.1).
 
 ### Grupo 4 · Orden y plegado · Gemini · solo HTML · prioridad media
 - [ ] Ingresos: "Anotar plata que entró" va primero (3.1).
