@@ -394,6 +394,15 @@ function irA(tab) {
 $("apps").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) irA(ultimaPestana[b.dataset.modo]); });
 // Al abrir, vuelve a la sección que estaba usando.
 try { if (localStorage.getItem("mq-seccion") === "comidas") irA("menu"); } catch (e) {}
+/* Ocultar las cifras de Hoy, como en las apps de los bancos, para cuando alguien mira la pantalla.
+   Es solo de este dispositivo: no toca los datos, no se sincroniza ni va en el respaldo. Las cifras se tapan con CSS. */
+function ocultarCifras(si) {
+  document.documentElement.classList.toggle("cifras-ocultas", si);
+  var b = $("heroOjo"); b.setAttribute("aria-pressed", String(si)); b.setAttribute("aria-label", si ? "Mostrar las cifras" : "Ocultar las cifras");
+  try { if (si) localStorage.setItem("mq-ocultar", "1"); else localStorage.removeItem("mq-ocultar"); } catch (e) {}
+}
+$("heroOjo").addEventListener("click", function () { ocultarCifras(!document.documentElement.classList.contains("cifras-ocultas")); });
+try { if (localStorage.getItem("mq-ocultar") === "1") ocultarCifras(true); } catch (e) {}
 function cambiarQ(q) { S.q = q; renderHoy(); }
 $("qPrev").addEventListener("click", function () { cambiarQ(anteriorQ(S.q)); });
 $("qNext").addEventListener("click", function () { cambiarQ(siguientePago(S.q)); });

@@ -73,6 +73,15 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 - [x] Menú y Freidora: más peso a los rótulos de cada comida y a la pastilla de °C y minutos (6.3, 10.3).
 - [x] Botón seleccionado con verde lleno (decisión D2): faltaba en los grupos y se hizo aquí, en `.seg`.
 
+### Grupo 5b · Pulido para que se vea más elegante · Claude · pedido por el usuario
+- [x] Tarjetas sin borde en claro, esquinas de 16 px y más aire; las tres cifras de Hoy en una sola tarjeta.
+- [x] Cifra principal en 700 con números de ancho fijo; rótulo sin mayúsculas; barra de avance más fina.
+- [x] Flechas ‹ › dibujadas en SVG; selector de sección con subrayado verde en vez del chulo.
+- [x] Barra de pestañas translúcida; respuesta suave al tocar botones; color de selección y cursor del tema.
+- [x] Paleta "Cobalto" (elegida por el usuario, reemplaza a "Salvia y marfil"): tarjeta principal azul noche, acciones en cobalto y neutros fríos, en claro y oscuro. Todo texto pasa 4,5:1 y el detector de Impeccable da 0 avisos.
+- [x] Botón de ojo en Hoy para ocultar lo que queda de la quincena y las tres cifras (pedido por el usuario). Se guarda en el dispositivo, no en los datos.
+- [ ] Verlo en el iPhone: el desenfoque de la barra de abajo y el subrayado del selector de arriba.
+
 ### Grupo 6 · Cambios con lógica · Claude · solo lo aprobado en D3 a D6
 Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [ ] D3: esconder la tarjeta de vencidos cuando no hay ninguno.

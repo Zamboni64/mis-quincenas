@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mis Quincenas</title>
 <meta name="description" content="Presupuesto personal por quincenas: gastos, pagos, otros ingresos y plan de deudas.">
-<meta name="theme-color" content="#0E6B5A">
+<meta name="theme-color" content="#0B1E4F">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Quincenas">
@@ -39,14 +39,18 @@
     </div>
     <div class="top">
       <div class="qnav">
-        <button id="qPrev" aria-label="Quincena anterior">‹</button>
+        <button id="qPrev" aria-label="Quincena anterior"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="qlabel" id="qLabel">Quincena</div>
-        <button id="qNext" aria-label="Quincena siguiente">›</button>
+        <button id="qNext" aria-label="Quincena siguiente"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <button class="del" id="qHoy" hidden>Ir a la actual</button>
     </div>
 
     <div class="card hero" id="hero">
+      <button class="ojo" id="heroOjo" type="button" aria-pressed="false" aria-label="Ocultar las cifras">
+        <svg class="ojo-ver" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        <svg class="ojo-tapado" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 20L20 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
       <div class="lab" id="heroLab">Le queda en esta quincena</div>
       <div class="big num" id="heroBig">…</div>
       <div class="sub num" id="heroSub">Cargando sus datos</div>
@@ -173,9 +177,9 @@
   <section class="tab" id="tab-menu" hidden>
     <div class="top">
       <div class="qnav">
-        <button id="mPrev" type="button" aria-label="Día anterior">‹</button>
+        <button id="mPrev" type="button" aria-label="Día anterior"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="qlabel" id="mLabel">Hoy</div>
-        <button id="mNext" type="button" aria-label="Día siguiente">›</button>
+        <button id="mNext" type="button" aria-label="Día siguiente"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <button class="del" id="mIrHoy" type="button" hidden>Ir a hoy</button>
     </div>
