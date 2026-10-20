@@ -114,30 +114,18 @@
     <div class="card"><h2 id="pgSigT">Mes siguiente</h2><div class="list" id="pgSig"></div></div>
     <p class="small muted">Las libranzas, los seguros, YouTube e iCloud no aparecen porque se debitan solos.</p>
     <div class="card">
-      <h2>Recordatorios en el calendario</h2>
-      <p class="small muted" style="margin-bottom:10px">Crea un archivo con los pagos pendientes de los próximos seis meses y los días en que debe guardar plata. Al abrirlo, el Calendario del teléfono le ofrece agregarlos y le avisa unos días antes y el día del pago, aunque no abra la app.</p>
-      <label style="margin-bottom:10px">Hora del aviso <input id="calHora" type="time" value="18:00"></label>
-      <button class="primary" id="crearCal" type="button" style="width:100%">Crear recordatorios</button>
-      <div class="small muted" id="calMsg" role="status" style="margin-top:6px"></div>
+      <details>
+        <summary>Recordatorios en el calendario</summary>
+        <p class="small muted" style="margin-top:10px;margin-bottom:10px">Crea un archivo con los pagos pendientes de los próximos seis meses y los días en que debe guardar plata. Al abrirlo, el Calendario del teléfono le ofrece agregarlos y le avisa unos días antes y el día del pago, aunque no abra la app.</p>
+        <label style="margin-bottom:10px">Hora del aviso <input id="calHora" type="time" value="18:00"></label>
+        <button class="primary" id="crearCal" type="button" style="width:100%">Crear recordatorios</button>
+        <div class="small muted" id="calMsg" role="status" style="margin-top:6px"></div>
+      </details>
     </div>
   </section>
 
   <!-- ===================== INGRESOS ===================== -->
   <section class="tab" id="tab-ingresos" hidden>
-    <div class="card">
-      <h2>Plata que me deben</h2>
-      <div class="list" id="meDeben"><div class="empty">Cargando…</div></div>
-      <p class="small muted" style="margin-top:8px">No cuenta en el presupuesto hasta que anote el pago aquí abajo.</p>
-      <form id="fDebe" autocomplete="off" style="margin-top:10px">
-        <div class="row2">
-          <label>Quién o qué <input id="mNombre" maxlength="40" placeholder="Ej.: Carlos, préstamo"></label>
-          <label>Cuánto me debe <input id="mValor" inputmode="numeric" placeholder="$ 0"></label>
-        </div>
-        <button class="ghost" id="mBtn" type="submit">Agregar a la lista</button>
-        <div class="small muted" id="mMsg" role="status"></div>
-      </form>
-    </div>
-
     <div class="card">
       <h2>Anotar plata que entró</h2>
       <form id="fIng" autocomplete="off">
@@ -159,6 +147,20 @@
     <div class="card">
       <h2>Lo que ha entrado</h2>
       <div class="list" id="listaIng"><div class="empty">Aún no ha anotado ingresos aparte del sueldo.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Plata que me deben</h2>
+      <div class="list" id="meDeben"><div class="empty">Cargando…</div></div>
+      <p class="small muted" style="margin-top:8px">No cuenta en el presupuesto hasta que anote el pago arriba en «Anotar plata que entró».</p>
+      <form id="fDebe" autocomplete="off" style="margin-top:10px">
+        <div class="row2">
+          <label>Quién o qué <input id="mNombre" maxlength="40" placeholder="Ej.: Carlos, préstamo"></label>
+          <label>Cuánto me debe <input id="mValor" inputmode="numeric" placeholder="$ 0"></label>
+        </div>
+        <button class="ghost" id="mBtn" type="submit">Agregar a la lista</button>
+        <div class="small muted" id="mMsg" role="status"></div>
+      </form>
     </div>
 
     <div class="card">
@@ -348,23 +350,25 @@
     </div>
 
     <div class="card">
-      <h2>Pedirle recetas de freidora a Claude</h2>
-      <ol class="pasos">
-        <li>Copie su despensa con este botón.</li>
-      </ol>
-      <button class="primary" id="frCopiar" type="button" style="width:100%">Copiar despensa para la freidora</button>
-      <div class="small muted" id="frCopMsg" role="status" style="margin-top:6px"></div>
-      <textarea id="frCopTxt" hidden readonly></textarea>
-      <ol class="pasos" start="2">
-        <li>Péguelo en un chat con Claude y espere la respuesta: le da las recetas y, al final, un bloque de código.</li>
-        <li>Copie ese bloque de código y péguelo aquí. Las recetas quedan guardadas en esta pestaña.</li>
-      </ol>
-      <textarea id="frPegar" placeholder="Pegue aquí el bloque que le dio Claude" aria-label="Respuesta de Claude con recetas de freidora"></textarea>
-      <div class="stack" style="margin-top:8px">
-        <button class="ghost" id="frPegarBtn" type="button">Pegar lo copiado</button>
-        <button class="primary" id="frGuardar" type="button">Guardar recetas</button>
-      </div>
-      <div class="small muted" id="frPegarMsg" role="status" style="margin-top:6px"></div>
+      <details>
+        <summary>Pedirle recetas de freidora a Claude</summary>
+        <ol class="pasos" style="margin-top:10px">
+          <li>Copie su despensa con este botón.</li>
+        </ol>
+        <button class="primary" id="frCopiar" type="button" style="width:100%">Copiar despensa para la freidora</button>
+        <div class="small muted" id="frCopMsg" role="status" style="margin-top:6px"></div>
+        <textarea id="frCopTxt" hidden readonly></textarea>
+        <ol class="pasos" start="2">
+          <li>Péguelo en un chat con Claude y espere la respuesta: le da las recetas y, al final, un bloque de código.</li>
+          <li>Copie ese bloque de código y péguelo aquí. Las recetas quedan guardadas en esta pestaña.</li>
+        </ol>
+        <textarea id="frPegar" placeholder="Pegue aquí el bloque que le dio Claude" aria-label="Respuesta de Claude con recetas de freidora"></textarea>
+        <div class="stack" style="margin-top:8px">
+          <button class="ghost" id="frPegarBtn" type="button">Pegar lo copiado</button>
+          <button class="primary" id="frGuardar" type="button">Guardar recetas</button>
+        </div>
+        <div class="small muted" id="frPegarMsg" role="status" style="margin-top:6px"></div>
+      </details>
     </div>
   </section>
 
@@ -378,35 +382,7 @@
 
   <!-- ===================== MÁS ===================== -->
   <section class="tab" id="tab-mas" hidden>
-    <div class="card">
-      <h2>Preguntarle a Claude</h2>
-      <p class="small muted" style="margin-bottom:10px">Copia un resumen de sus finanzas de hoy. Péguelo en un chat con Claude y escriba su pregunta, por ejemplo si le conviene hacer una compra.</p>
-      <button class="primary" id="copiarResumen" type="button" style="width:100%">Copiar resumen</button>
-      <div class="small muted" id="resMsg" role="status" style="margin-top:6px"></div>
-      <textarea id="resTxt" hidden readonly></textarea>
-    </div>
-
-    <div class="card">
-      <h2>Sincronización entre dispositivos</h2>
-      <p class="small muted" id="syncEstado" style="margin-bottom:10px">Cargando la sincronización…</p>
-      <div id="syncFuera">
-        <form id="fSync" autocomplete="on">
-          <label>Correo <input id="sCorreo" type="email" autocomplete="username" inputmode="email" required></label>
-          <label>Contraseña <input id="sClave" type="password" autocomplete="current-password" minlength="6" required></label>
-          <button class="primary" type="submit">Iniciar sesión</button>
-        </form>
-        <div class="stack" style="margin-top:8px">
-          <button class="ghost" id="sCrear" type="button">Crear cuenta con este correo y contraseña</button>
-          <button class="del" id="sOlvido" type="button">Olvidé mi contraseña</button>
-        </div>
-      </div>
-      <div id="syncDentro" class="stack" hidden>
-        <button class="primary" id="sAhora" type="button">Sincronizar ahora</button>
-        <button class="ghost" id="sSalir" type="button">Cerrar sesión</button>
-      </div>
-      <div class="small muted" id="syncMsg" role="status" style="margin-top:6px"></div>
-    </div>
-
+    <div class="subt">Respaldo y herramientas</div>
     <div class="card">
       <h2>Respaldo</h2>
       <p class="small muted" style="margin-bottom:10px">Un archivo con todos sus datos, que queda en sus manos. Guárdelo cada quincena: lo protege de un borrado por error, que con la sincronización se copiaría a todos sus dispositivos.</p>
@@ -426,38 +402,80 @@
     </div>
 
     <div class="card">
-      <h2>Corregir lo libre de una quincena</h2>
-      <p class="small muted" style="margin-bottom:10px">Para un caso puntual, por ejemplo si el casino salió distinto. Aplica a la quincena que tiene abierta en "Hoy". Déjelo vacío para volver al cálculo normal.</p>
-      <form id="fAj">
-        <div class="row2">
-          <label id="aLab">Libre <input id="aLibre" inputmode="numeric"></label>
-          <button class="primary" id="aBtn" type="submit" style="align-self:end">Guardar</button>
+      <h2>Sincronización entre dispositivos</h2>
+      <p class="small muted" id="syncEstado" style="margin-bottom:10px">Cargando la sincronización…</p>
+      <div id="syncFuera">
+        <form id="fSync" autocomplete="on">
+          <label>Correo <input id="sCorreo" type="email" autocomplete="username" inputmode="email" required></label>
+          <label>Contraseña <input id="sClave" type="password" autocomplete="current-password" minlength="6" required></label>
+          <button class="primary" type="submit">Iniciar sesión</button>
+        </form>
+        <div class="stack" style="margin-top:8px">
+          <button class="ghost" id="sCrear" type="button">Crear cuenta con este correo y contraseña</button>
+          <button class="link" id="sOlvido" type="button">Olvidé mi contraseña</button>
         </div>
-        <div class="small muted" id="aMsg" role="status"></div>
-      </form>
+      </div>
+      <div id="syncDentro" class="stack" hidden>
+        <button class="primary" id="sAhora" type="button">Sincronizar ahora</button>
+        <button class="ghost" id="sSalir" type="button">Cerrar sesión</button>
+      </div>
+      <div class="small muted" id="syncMsg" role="status" style="margin-top:6px"></div>
     </div>
 
     <div class="card">
-      <h2>Corregir el casino de una quincena</h2>
-      <p class="small muted" style="margin-bottom:10px">Escriba lo que de verdad le cobraron de casino. La diferencia se suma o se resta de lo libre de la quincena que tiene abierta en "Hoy"; lo que se aparta para la siguiente no cambia. Déjelo vacío para usar el valor de Mis datos.</p>
-      <form id="fCasino">
-        <div class="row2">
-          <label id="cLab">Casino <input id="cCasino" inputmode="numeric"></label>
-          <button class="primary" id="cBtn" type="submit" style="align-self:end">Guardar</button>
-        </div>
-        <div class="small muted" id="cMsg" role="status"></div>
-      </form>
+      <h2>Preguntarle a Claude</h2>
+      <p class="small muted" style="margin-bottom:10px">Copia un resumen de sus finanzas de hoy. Péguelo en un chat con Claude y escriba su pregunta, por ejemplo si le conviene hacer una compra.</p>
+      <button class="primary" id="copiarResumen" type="button" style="width:100%">Copiar resumen</button>
+      <div class="small muted" id="resMsg" role="status" style="margin-top:6px"></div>
+      <textarea id="resTxt" hidden readonly></textarea>
     </div>
 
+    <div class="subt">Quincena actual</div>
     <div class="card">
-      <h2>Lo que apartó de verdad</h2>
-      <p class="small muted" style="margin-bottom:10px">Si de la quincena que tiene abierta en "Hoy" apartó una cantidad distinta a la que dice la app, escríbala aquí. Lo libre de esta quincena y lo que recibe la siguiente quedan con ese valor. Déjelo vacío para volver al cálculo de la app.</p>
-      <form id="fApartado">
-        <div class="row2">
-          <label id="apLab">Apartó <input id="apValor" inputmode="numeric"></label>
-          <button class="primary" id="apBtn" type="submit" style="align-self:end">Guardar</button>
+      <details>
+        <summary>Correcciones de una quincena</summary>
+        <div style="margin-top:12px">
+          <h3>Corregir lo libre de una quincena</h3>
+          <p class="small muted" style="margin-bottom:10px">Para un caso puntual, por ejemplo si el casino salió distinto. Aplica a la quincena que tiene abierta en "Hoy". Déjelo vacío para volver al cálculo normal.</p>
+          <form id="fAj">
+            <div class="row2">
+              <label id="aLab">Libre <input id="aLibre" inputmode="numeric"></label>
+              <button class="primary" id="aBtn" type="submit" style="align-self:end">Guardar</button>
+            </div>
+            <div class="small muted" id="aMsg" role="status"></div>
+          </form>
+
+          <h3>Corregir el casino de una quincena</h3>
+          <p class="small muted" style="margin-bottom:10px">Escriba lo que de verdad le cobraron de casino. La diferencia se suma o se resta de lo libre de la quincena que tiene abierta en "Hoy"; lo que se aparta para la siguiente no cambia. Déjelo vacío para usar el valor de Mis datos.</p>
+          <form id="fCasino">
+            <div class="row2">
+              <label id="cLab">Casino <input id="cCasino" inputmode="numeric"></label>
+              <button class="primary" id="cBtn" type="submit" style="align-self:end">Guardar</button>
+            </div>
+            <div class="small muted" id="cMsg" role="status"></div>
+          </form>
+
+          <h3>Lo que apartó de verdad</h3>
+          <p class="small muted" style="margin-bottom:10px">Si de la quincena que tiene abierta en "Hoy" apartó una cantidad distinta a la que dice la app, escríbala aquí. Lo libre de esta quincena y lo que recibe la siguiente quedan con ese valor. Déjelo vacío para volver al cálculo de la app.</p>
+          <form id="fApartado">
+            <div class="row2">
+              <label id="apLab">Apartó <input id="apValor" inputmode="numeric"></label>
+              <button class="primary" id="apBtn" type="submit" style="align-self:end">Guardar</button>
+            </div>
+            <div class="small muted" id="apMsg" role="status"></div>
+          </form>
         </div>
-        <div class="small muted" id="apMsg" role="status"></div>
+      </details>
+    </div>
+
+    <div class="subt">Mis datos y gastos fijos</div>
+    <div class="card">
+      <h2>Mis datos</h2>
+      <p class="small muted" style="margin-bottom:6px">Con estos valores se calcula todo. Si cambia uno, las quincenas y el plan se recalculan.</p>
+      <form id="fDatos">
+        <div id="camposDatos"><div class="empty">Cargando…</div></div>
+        <button class="primary" id="dBtn" type="submit">Guardar cambios</button>
+        <div class="small muted" id="dMsg" role="status"></div>
       </form>
     </div>
 
@@ -480,16 +498,6 @@
         <p class="small muted">Si lo paga usted, también aparece en la pestaña Pagos con su fecha límite.</p>
         <button class="primary" id="fBtn" type="submit">Agregar gasto fijo</button>
         <div class="small muted" id="fMsg" role="status"></div>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Mis datos</h2>
-      <p class="small muted" style="margin-bottom:6px">Con estos valores se calcula todo. Si cambia uno, las quincenas y el plan se recalculan.</p>
-      <form id="fDatos">
-        <div id="camposDatos"><div class="empty">Cargando…</div></div>
-        <button class="primary" id="dBtn" type="submit">Guardar cambios</button>
-        <div class="small muted" id="dMsg" role="status"></div>
       </form>
     </div>
 

@@ -25,6 +25,8 @@ body{margin:0;padding-top:env(safe-area-inset-top,0px);background:var(--bg);colo
 section.tab{display:flex;flex-direction:column;gap:14px}
 h1{font-family:var(--display);font-weight:700;font-size:20px;margin:0;letter-spacing:-.01em}
 h2{font-family:var(--display);font-weight:700;font-size:16px;margin:0 0 8px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;font-size:14px;margin:14px 0 6px}
+h3:first-child{margin-top:0}
 p{margin:0}
 .num{font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
@@ -56,6 +58,8 @@ p{margin:0}
 .note.plain{background:var(--soft);color:var(--ink)}
 button.note{border:0;text-align:left;width:100%;font:inherit;cursor:pointer;font-weight:600}
 form{display:flex;flex-direction:column;gap:10px}
+#fGasto{gap:8px}
+#fGasto .row2{gap:8px}
 label{font-size:12px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:4px;min-width:0}
 /* 16px evita que el iPhone haga zoom al tocar un campo */
 input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
@@ -76,6 +80,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 .item .amt{font-weight:700;white-space:nowrap}
 .del{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:6px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer;text-decoration:underline;box-sizing:border-box}
 .del.sure{color:var(--bad);font-weight:700}
+.link{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:6px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer;text-decoration:underline;box-sizing:border-box}
 .pill{font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
 .pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)}
 .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.plain{background:var(--soft);color:var(--muted)}
@@ -90,6 +95,8 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 details{border-top:1px solid var(--line);padding:8px 0}
 details:first-of-type{border-top:0}
 summary{cursor:pointer;font-weight:600;padding:12px 0;min-height:44px;line-height:20px;box-sizing:border-box}
+.card>details:only-child{padding:0}
+.card>details:only-child>summary{font-size:16px;font-weight:700}
 details .campos{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(to left,var(--surface) 30%,transparent) 100% 0,radial-gradient(farthest-side at 100% 50%,color-mix(in srgb,var(--ink) 18%,transparent),transparent) 100% 0;background-repeat:no-repeat;background-size:30px 100%,12px 100%;background-attachment:local,scroll}
 table{border-collapse:collapse;font-size:13px;width:100%}
@@ -122,6 +129,7 @@ input::-webkit-date-and-time-value{text-align:left;margin:0}
 .receta p{font-size:13px;color:var(--muted);margin:2px 0 6px}
 .receta .ghost{padding:10px 14px;min-height:44px;width:auto;font-size:13px}
 .subt{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:12px 0 2px}
+.tab>.subt:first-child{margin-top:0}
 .item .qty small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
 /* Selector de sección en el encabezado: Mis Quincenas / Mis comidas */
 .apps{display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:wrap}

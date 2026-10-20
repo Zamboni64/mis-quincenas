@@ -54,15 +54,15 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 - [x] Borde y sombra en la columna "Mes", que queda fija, y una señal de que la tabla sigue hacia la derecha (4.1).
 
 ### Grupo 4 · Orden y plegado · Gemini · solo HTML · prioridad media
-- [ ] Ingresos: "Anotar plata que entró" va primero (3.1).
-- [ ] Pagos: "Recordatorios en el calendario" queda dentro de un desplegable cerrado (2.4).
-- [ ] Más: agrupar en tres bloques con subtítulos (5.1).
+- [x] Ingresos: "Anotar plata que entró" va primero (3.1).
+- [x] Pagos: "Recordatorios en el calendario" queda dentro de un desplegable cerrado (2.4).
+- [x] Más: agrupar en tres bloques con subtítulos (5.1). "Respaldo y herramientas" va primero, porque el aviso de respaldo de Hoy y "Iniciar sesión" llevan al principio de Más.
   - Quincena: las tres correcciones dentro de un desplegable "Correcciones de una quincena", sin unir sus formularios (5.2).
   - Mis datos y gastos fijos.
   - Respaldo, Excel, sincronización y Preguntarle a Claude.
-- [ ] Freidora: "Pedirle recetas a Claude" queda dentro de un desplegable cerrado (10.2).
-- [ ] "Olvidé mi contraseña" pasa a un estilo de enlace neutro en vez de `.del`, conservando su `id` (5.4).
-- [ ] Compactar un poco el espacio entre filas del formulario de gasto, sin achicar los campos (1.4).
+- [x] Freidora: "Pedirle recetas a Claude" queda dentro de un desplegable cerrado (10.2).
+- [x] "Olvidé mi contraseña" pasa a un estilo de enlace neutro en vez de `.del`, conservando su `id` (5.4).
+- [x] Compactar un poco el espacio entre filas del formulario de gasto, sin achicar los campos (1.4).
 
 ### Grupo 5 · Textos que arma la programación · Claude · prioridad baja
 - [ ] Compras: estado vacío con chulo y un mensaje positivo (9.1).
@@ -81,7 +81,7 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 
 ### Grupo 7 · Revisión cruzada y publicación
 - [ ] Gemini revisa lo de Claude y Claude revisa lo de Gemini, con `git diff main`.
-- [ ] Ver en el iPhone el globito de "Pagos" (11.2) y el color de la barra del sistema en modo oscuro (N5).
+- [ ] Ver en el iPhone el globito de "Pagos" (11.2), el color de la barra del sistema en modo oscuro (N5) y la sombra derecha de la tabla del Plan, que se debe apagar al llegar al final (Grupo 3).
 - [ ] Subir `VERSION` en `sw.js` y `VERSION_APP` en `js/app.js`, con el mismo número.
 - [ ] Publicar en `main` solo con permiso del usuario.
 
