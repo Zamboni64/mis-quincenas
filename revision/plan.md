@@ -34,9 +34,9 @@ Une la auditoría de Gemini (`gemini.md`) con la segunda opinión de Claude (`cl
   - Debe fijar el color del texto sobre rojo en modo oscuro (`--bad-ink`), cómo se ve un botón seleccionado (D2) y el alto mínimo de toque: 44 px.
 
 ### Grupo 1 · Contrastes en modo oscuro · Gemini · solo CSS · prioridad alta
-- [ ] El chulo de pago marcado se lee en oscuro: `.check[aria-pressed="true"]` con `color: var(--accent-ink)` (2.1).
-- [ ] La cifra de Hoy en negativo se lee en oscuro: `.hero.neg` con `--bad-ink` (1.1).
-- [ ] El globito rojo de alertas de Pagos y Despensa se lee en oscuro: `.badge` con `--bad-ink` (N1).
+- [x] El chulo de pago marcado se lee en oscuro: `.check[aria-pressed="true"]` con `color: var(--accent-ink)` (2.1).
+- [x] La cifra de Hoy en negativo se lee en oscuro: `.hero.neg` con `--bad-ink` (1.1).
+- [x] El globito rojo de alertas de Pagos y Despensa se lee en oscuro: `.badge` con `--bad-ink` (N1).
 
 ### Grupo 2 · Tamaños de toque · Gemini · solo CSS · prioridad alta
 Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
