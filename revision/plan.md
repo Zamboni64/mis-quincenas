@@ -93,8 +93,8 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 ### Grupo 7 · Revisión cruzada y publicación
 - [x] Gemini revisa lo de Claude y Claude revisa lo de Gemini, con `git diff main`.
 - [x] Ver en el iPhone el globito de "Pagos" (11.2), el color de la barra del sistema en modo oscuro (N5) y la sombra derecha de la tabla del Plan, que se debe apagar al llegar al final (Grupo 3).
-- [ ] Subir `VERSION` en `sw.js` y `VERSION_APP` en `js/app.js`, con el mismo número.
-- [ ] Publicar en `main` solo con permiso del usuario.
+- [x] Subir `VERSION` en `sw.js` y `VERSION_APP` en `js/app.js`, con el mismo número.
+- [x] Publicar en `main` solo con permiso del usuario. Publicada la versión 3.19 el 2026-10-20.
 
 ## Descartado o aplazado
 
