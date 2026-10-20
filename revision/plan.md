@@ -40,15 +40,15 @@ Une la auditoría de Gemini (`gemini.md`) con la segunda opinión de Claude (`cl
 
 ### Grupo 2 · Tamaños de toque · Gemini · solo CSS · prioridad alta
 Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
-- [ ] Barra de pestañas de abajo (11.1), y que el final de cada pestaña no quede tapado: `.wrap` con `calc(100px + env(safe-area-inset-bottom))` (N2).
-- [ ] Chulo de pago `.check` (2.2).
-- [ ] Botones − y + de la despensa `.mini` (7.1). Probar con nombres de alimentos largos.
-- [ ] Flechas ‹ › de quincena y de día `.qnav` (1.2, 6.2), con estilo para cuando están desactivadas (N3).
-- [ ] Botones Borrar, Quitar y Editar `.del` (1.3, 3.3), sin acercarlos más al monto.
-- [ ] Encabezados desplegables `summary` en toda la app (5.3, 10.1) y botón "La preparé" (`.ghost`).
-- [ ] Selector de arriba "Mis Quincenas / Mis comidas" `.apps` (11.3).
-- [ ] Cuadros de texto `textarea` a 16 px para que el iPhone no haga zoom (N4).
-- [ ] Revisar que nada se salga de la pantalla a 320 px.
+- [x] Barra de pestañas de abajo (11.1), y que el final de cada pestaña no quede tapado: `.wrap` con `calc(100px + env(safe-area-inset-bottom))` (N2).
+- [x] Chulo de pago `.check` (2.2).
+- [x] Botones − y + de la despensa `.mini` (7.1). Probar con nombres de alimentos largos.
+- [x] Flechas ‹ › de quincena y de día `.qnav` (1.2, 6.2), con estilo para cuando están desactivadas (N3).
+- [x] Botones Borrar, Quitar y Editar `.del` (1.3, 3.3), sin acercarlos más al monto.
+- [x] Encabezados desplegables `summary` en toda la app (5.3, 10.1) y botón "La preparé" (`.ghost`).
+- [x] Selector de arriba "Mis Quincenas / Mis comidas" `.apps` (11.3).
+- [x] Cuadros de texto `textarea` a 16 px para que el iPhone no haga zoom (N4).
+- [x] Revisar que nada se salga de la pantalla a 320 px.
 
 ### Grupo 3 · Tabla del plan · Gemini · CSS · prioridad media
 - [ ] Borde y sombra en la columna "Mes", que queda fija, y una señal de que la tabla sigue hacia la derecha (4.1).
