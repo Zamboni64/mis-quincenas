@@ -4,6 +4,8 @@
 (function () {
 "use strict";
 var A = window.MQ.app, $ = A.$, esc = A.esc, money = A.money, S = A.S;
+// Lo mínimo que debe quedar en la cuenta antes del pago; el menú que se le pide a Claude no puede gastar por debajo de esto.
+var PISO_CUENTA = 30000;
 /* Almuerzos fuera de casa: se elige para la semana en curso (lunes a domingo), porque unas semanas almuerza fuera y otras no.
    Se guarda con los datos del presupuesto como { semana: lunes de esa semana, dias: N }; al cambiar de semana deja de valer. */
 function fechaLocal(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
@@ -344,8 +346,18 @@ $("cCopiar").addEventListener("click", function () {
   if (!L.length) { msg.textContent = "Primero agregue alimentos a la despensa."; return; }
   var hoy = A.hoyISO(), q = A.quincenaDe(hoy), sig = A.siguientePago(q), saldo = saldoQuincena(), faltan = Math.max(1, A.dias(hoy, A.diaPago(sig)));
   var DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"], nDias = Math.min(7, faltan);
-  var txt = ["Vivo solo y cocino para una persona. Hoy es " + DIAS[fechaLocal(hoy).getDay()] + " " + A.corto(hoy) + " (" + hoy + "). Los valores van en pesos colombianos."].concat(L);
-  if (saldo != null) txt.push("", "MI PRESUPUESTO", "- Me quedan " + money(saldo) + " para comida, transporte y todo lo demás hasta el pago del " + A.corto(A.diaPago(sig)) + " (" + faltan + " día(s)).");
+  var txt = ["Vivo solo y cocino para una persona. Hoy es " + DIAS[fechaLocal(hoy).getDay()] + " " + A.corto(hoy) + " (" + hoy + "). Los valores van en pesos colombianos.",
+    "", "CÓMO COCINO",
+    "- Tengo freidora de aire: úsala en las recetas donde sirva.",
+    "- No tengo ni sé usar olla a presión (pitadora): no la uses en ninguna receta.",
+    "- Como vivo solo, prefiero preparaciones que rindan para 2 o 3 comidas y se guarden bien en la nevera, para cocinar menos veces. Repártelas en el menú.",
+    "- No me gusta mucho la arepa: puedo comerla, pero si hay otra opción, prefiérela."].concat(L);
+  if (saldo != null) {
+    txt.push("", "MI PRESUPUESTO", "- Me quedan " + money(saldo) + " para comida, transporte y todo lo demás hasta el pago del " + A.corto(A.diaPago(sig)) + " (" + faltan + " día(s)).",
+      "- Antes del pago, mi cuenta no puede bajar de " + money(PISO_CUENTA) + ".");
+    // El tope para mercar es lo que queda menos el piso, en cualquier momento de la quincena.
+    txt.push("- Así que para mercar puedo gastar como máximo " + money(Math.max(0, saldo - PISO_CUENTA)) + (saldo <= PISO_CUENTA ? ": no compres nada, usa solo lo que tengo." : ". Es un tope, no una meta: compra solo lo necesario."));
+  }
   txt.push("", "LO QUE NECESITO",
     "Arma mi menú para " + (nDias === 1 ? "hoy" : "los próximos " + nDias + " días, empezando hoy") + " con desayuno, almuerzo y comida. Usa primero lo que ya tengo, que sean recetas sencillas, y que lo que haya que comprar no se pase de mi presupuesto." +
     (almuerzosFuera() ? " Los días que almuerzo fuera de casa (elige tú cuáles, entre semana), pon el almuerzo como \"fuera\"." : ""),

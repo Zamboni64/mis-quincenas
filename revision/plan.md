@@ -96,6 +96,12 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [x] Subir `VERSION` en `sw.js` y `VERSION_APP` en `js/app.js`, con el mismo número.
 - [x] Publicar en `main` solo con permiso del usuario. Publicada la versión 3.19 el 2026-10-20.
 
+### Grupo 8 · Mejor pedido del menú a Claude · Claude · pedido por el usuario
+- [x] Piso de $30.000: la cuenta nunca baja de ahí antes del pago. El tope para mercar es lo que queda menos $30.000, y Claude compra solo lo necesario.
+- [x] Le dice a Claude que hay freidora de aire y que no use olla a presión.
+- [x] Prefiere preparaciones que rindan para 2 o 3 comidas, porque vive solo.
+- [x] Poca arepa: solo si no hay otra opción.
+
 ## Descartado o aplazado
 
 - **4.2, cortar la tabla del plan a 6 meses:** ya se corta sola cuando la deuda llega a cero.
