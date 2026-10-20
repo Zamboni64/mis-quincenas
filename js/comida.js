@@ -27,8 +27,8 @@ function propias() { return (S.recetas || []).map(function (r) { return Despensa
 /* ---------- dibujar ---------- */
 function render() {
   var items = S.despensa || [], r = Despensa.resumen(items, 3), saldo = saldoQuincena();
-  if (document.activeElement !== $("cFuera")) $("cFuera").value = String(almuerzosFuera());
-  $("cFuera").disabled = !S.P;
+  var fuera = String(almuerzosFuera());
+  Array.prototype.forEach.call($("cFuera").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === fuera)); b.disabled = !S.P; });
   if (!avisoGuardado) $("cFueraMsg").textContent = (ajusteSemana() && semanaSinElegir() ? "Empezó una semana nueva: elija si esta semana almuerza fuera. " : "") + "Vale solo para esta semana, hasta el domingo. El lunes vuelve a «Ninguno» para que elija de nuevo.";
   // resumen
   if (!items.length) { $("cBig").textContent = "–"; $("cSub").textContent = "Agregue sus alimentos para ver el estimado."; }
@@ -255,7 +255,9 @@ $("fCompra").addEventListener("submit", function (e) { e.preventDefault();
         compra: { itemId: c.id, nombre: it.nombre, cantidad: cantidad, unidad: it.unidad || "unidades", precio: c.precio, precioAntes: it.precio || 0, nuevo: esNuevo, lista: (r && r.sumado) || 0, trae: trae, traeAntes: traeAntes } }); })
     .then(function () { $("coCant").value = ""; $("coValor").value = ""; $("coNombre").value = ""; $("coItem").dataset.ops = ""; traePara = "";
       msg.textContent = "Listo: " + it.nombre + " quedó en " + Despensa.textoCantidad(c) + " y se descontaron " + money(valor) + " de la quincena." + frase;
-      A.render(); $("coItem").value = c.id; mostrarCompra(); })
+      A.render(); $("coItem").value = c.id; mostrarCompra();
+      // En la caja del supermercado sirve saber de una vez cuánto queda libre, sin ir a Hoy.
+      var s = saldoQuincena(); if (s != null) msg.textContent += s < 0 ? " Ya se pasó " + money(-s) + " en esta quincena." : " Le quedan " + money(s) + " libres en la quincena."; })
     .catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }).then(function () { btn.disabled = false; });
 });
 
@@ -315,7 +317,10 @@ document.addEventListener("click", function (e) {
 });
 A.segmento("cMomento", function (v) { momento = v; render(); });
 // Cuántos días almuerza fuera: se guarda con los datos del presupuesto para que también se sincronice.
-$("cFuera").addEventListener("change", function () { if (!S.P) return; var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_semana = { semana: lunes(), dias: parseInt(this.value, 10) || 0 }; delete P.almuerzos_fuera;
+// Botones del 0 al 7 (7 = todos los días). Se guarda igual que antes: { semana, dias }.
+$("cFuera").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b || !S.P) return;
+  Array.prototype.forEach.call(this.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+  var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_semana = { semana: lunes(), dias: parseInt(b.dataset.v, 10) || 0 }; delete P.almuerzos_fuera;
   avisoGuardado = true;
   A.guardarDatos(P).then(function () { msg.textContent = "Guardado para esta semana. El estimado de días ya lo tiene en cuenta."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
 $("notaDespensa").addEventListener("click", function () { A.irA("despensa"); });

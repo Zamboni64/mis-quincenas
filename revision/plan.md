@@ -84,10 +84,10 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 
 ### Grupo 6 · Cambios con lógica · Claude · solo lo aprobado en D3 a D6
 Antes de este grupo, el usuario guarda un respaldo desde la app.
-- [ ] D3: esconder la tarjeta de vencidos cuando no hay ninguno.
-- [ ] D4: confirmación con lo que queda libre después de registrar una compra.
-- [ ] D5: botones de almuerzos fuera de casa, del 0 al 7.
-- [ ] D6: nuevo estado vacío del Menú.
+- [x] D3: esconder la tarjeta de vencidos cuando no hay ninguno.
+- [x] D4: confirmación con lo que queda libre después de registrar una compra.
+- [x] D5: botones de almuerzos fuera de casa, del 0 al 7.
+- [x] D6: nuevo estado vacío del Menú.
 
 ### Grupo 7 · Revisión cruzada y publicación
 - [ ] Gemini revisa lo de Claude y Claude revisa lo de Gemini, con `git diff main`.

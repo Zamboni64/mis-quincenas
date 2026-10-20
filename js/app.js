@@ -139,7 +139,9 @@ function renderPagos() {
   var lista = listaPagos(), al = pagosEnAlerta(), mes = [], sig = [];
   lista.forEach(function (p) { if (p.fecha.slice(0, 7) === m0) mes.push(p); if (p.fecha.slice(0, 7) === m1) sig.push(p); });
   var vacio = '<div class="empty">Nada por aquí.</div>';
-  $("pgAlerta").innerHTML = al.length ? al.map(function (p) { return filaPago(p, hoy); }).join("") : '<div class="empty">No tiene pagos vencidos ni por vencer.</div>';
+  $("pgAlerta").innerHTML = al.length ? al.map(function (p) { return filaPago(p, hoy); }).join("") : "";
+  // Sin vencidos la tarjeta sobra: la nota de arriba ya dice "Todo al día".
+  $("pgAlerta").closest(".card").hidden = !al.length;
   $("pgMes").innerHTML = mes.length ? mes.map(function (p) { return filaPago(p, hoy); }).join("") : vacio;
   $("pgSig").innerHTML = sig.length ? sig.map(function (p) { return filaPago(p, hoy); }).join("") : vacio;
   $("pgMesT").textContent = "Este mes (" + MES[d.getMonth()] + ")"; $("pgSigT").textContent = "Mes siguiente (" + MES[(d.getMonth() + 1) % 12] + ")";

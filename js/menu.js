@@ -40,7 +40,10 @@ function render() {
   var primero = lista.length ? (lista[0].id < hoy ? lista[0].id : hoy) : hoy, ultimo = lista.length && lista[lista.length - 1].id > hoy ? lista[lista.length - 1].id : hoy;
   $("mPrev").disabled = diaSel <= primero; $("mNext").disabled = diaSel >= ultimo;
   var d = diaDe(diaSel), M = $("mDia");
-  if (!d) M.innerHTML = '<div class="empty">' + (lista.length ? "No hay menú guardado para este día." : "Aún no tiene un menú guardado. Siga los pasos de abajo para pedírselo a Claude y guardarlo aquí.") + '</div>';
+  // Sin ningún menú, en vez de un aviso gris se invita a pedirlo: el botón lleva a los pasos de abajo.
+  if (!d) M.innerHTML = lista.length ? '<div class="empty">No hay menú guardado para este día.</div>' :
+    '<p class="muted" style="margin-bottom:10px">Claude le arma el menú de la semana con lo que tiene en la despensa y su presupuesto.</p>' +
+    '<button class="primary" type="button" data-ir-pedir style="width:100%">Pedirle el menú a Claude</button>';
   else M.innerHTML = MOMENTOS.map(function (m) {
     var nombre = d[m], h = '<div class="receta"><div class="subt">' + TITULO[m] + '</div>';
     if (!nombre) return h + '<p>Sin plan para esta comida.</p></div>';
@@ -110,6 +113,8 @@ window.MQ.alDeshacerLista = function (nombre, sumado) {
 /* ---------- navegación entre días ---------- */
 $("mPrev").addEventListener("click", function () { diaSel = sumarDias(diaSel, -1); render(); });
 $("mNext").addEventListener("click", function () { diaSel = sumarDias(diaSel, 1); render(); });
+$("mDia").addEventListener("click", function (e) { if (!e.target.closest("[data-ir-pedir]")) return;
+  $("mPedirCard").scrollIntoView({ behavior: "smooth", block: "start" }); $("cCopiar").focus({ preventScroll: true }); });
 $("mIrHoy").addEventListener("click", function () { diaSel = A.hoyISO(); render(); });
 
 /* ---------- guardar lo que respondió Claude ---------- */

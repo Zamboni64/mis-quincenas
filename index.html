@@ -188,7 +188,7 @@
       <div id="mDia"><div class="empty">Aún no tiene un menú guardado.</div></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="mPedirCard">
       <h2>Pedirle el menú a Claude</h2>
       <ol class="pasos">
         <li>Copie su despensa y su presupuesto con este botón.</li>
@@ -223,9 +223,8 @@
     </div>
     <div class="note warn" id="cAlertas" hidden></div>
     <div class="card">
-      <label>Esta semana, ¿cuántos días almuerza fuera de casa?
-        <select id="cFuera"><option value="0">Ninguno: esta semana almuerzo en casa</option><option value="1">1 día</option><option value="2">2 días</option><option value="3">3 días</option><option value="4">4 días</option><option value="5">5 días</option><option value="6">6 días</option><option value="7">Todos los días</option></select>
-      </label>
+      <div class="rotulo" id="cFueraL">Esta semana, ¿cuántos días almuerza fuera de casa?</div>
+      <div class="seg seg4" id="cFuera" role="group" aria-labelledby="cFueraL"><button type="button" data-v="0" aria-pressed="true">Ninguno</button><button type="button" data-v="1" aria-pressed="false" aria-label="1 día">1</button><button type="button" data-v="2" aria-pressed="false" aria-label="2 días">2</button><button type="button" data-v="3" aria-pressed="false" aria-label="3 días">3</button><button type="button" data-v="4" aria-pressed="false" aria-label="4 días">4</button><button type="button" data-v="5" aria-pressed="false" aria-label="5 días">5</button><button type="button" data-v="6" aria-pressed="false" aria-label="6 días">6</button><button type="button" data-v="7" aria-pressed="false" aria-label="Todos los días">Todos</button></div>
       <div class="small muted" id="cFueraMsg" role="status" style="margin-top:6px">Vale solo para esta semana, hasta el domingo. El lunes vuelve a «Ninguno» para que elija de nuevo.</div>
     </div>
 
