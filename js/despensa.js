@@ -277,6 +277,9 @@ var Despensa = (function () {
     (Array.isArray(o.menu) ? o.menu : []).slice(0, 31).forEach(function (d) {
       if (!d || typeof d !== "object") return; var f = texto(d.fecha, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(f) || fechas[f]) return; fechas[f] = true;
       var dia = { fecha: f }; MOMENTOS.forEach(function (m) { var v = texto(m === "comida" ? (d.comida != null ? d.comida : d.cena) : d[m], 70); dia[m] = clave(v) === "fuera" ? "fuera" : v; });
+      // "recalentar": los momentos de ese día que son sobras de una preparación anterior. Si viene, se guarda aunque esté vacío:
+      // así se sabe que Claude sí marcó las sobras y no hay que adivinarlas.
+      if (d.recalentar != null) { var rc = []; (Array.isArray(d.recalentar) ? d.recalentar : [d.recalentar]).forEach(function (m) { m = momentoDe(m); if (m && rc.indexOf(m) < 0) rc.push(m); }); dia.recalentar = rc; }
       dias.push(dia);
     });
     dias.sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; });
@@ -355,7 +358,26 @@ var Despensa = (function () {
     return actual;
   }
 
-  return { piezaSugerida: piezaSugerida, rindeCon: rindeCon, PIEZAS: PIEZAS, porPaq: porPaq, piezas: piezas, conPiezas: conPiezas, conEquivalente: conEquivalente, nombrePieza: nombrePieza, trasCorreccion: trasCorreccion, trasCompra: trasCompra, aprende: aprende,
+  /* Sobras del menú: qué comidas son para recalentar y de cuál preparación salen.
+     dias: los días guardados ({ fecha o id, desayuno, almuerzo, comida, recalentar? }).
+     Si algún día trae "recalentar", se usa solo eso. Si no (menús viejos), se adivina: un almuerzo o una comida que repite
+     el plato de un almuerzo o comida anterior, hasta 2 días después, es sobra; cada preparación alcanza para 2 sobras como mucho.
+     Los desayunos nunca se adivinan: el mismo desayuno varios días se prepara cada día.
+     Devuelve { "AAAA-MM-DD|momento": { de: clave de la preparación } o { para: [claves de sus sobras] } }. */
+  function sobras(dias) {
+    var lista = (dias || []).slice().sort(function (a, b) { return (a.fecha || a.id) < (b.fecha || b.id) ? -1 : 1; });
+    var marcado = lista.some(function (d) { return Array.isArray(d.recalentar); }), out = {}, ultimo = {};
+    function dif(a, b) { return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5); }
+    lista.forEach(function (d) { var f = d.fecha || d.id;
+      MOMENTOS.forEach(function (m) { var nom = d[m]; if (!nom || nom === "fuera") return; var k = clave(nom), aqui = f + "|" + m, prev = ultimo[k];
+        var esSobra = marcado ? (d.recalentar || []).indexOf(m) >= 0 && !!prev
+          : m !== "desayuno" && !!prev && prev.m !== "desayuno" && dif(prev.f, f) <= 2 && (out[prev.key].para || []).length < 2;
+        if (esSobra) { out[aqui] = { de: prev.key }; out[prev.key].para = (out[prev.key].para || []).concat(aqui); }
+        else { out[aqui] = {}; ultimo[k] = { key: aqui, f: f, m: m }; } }); });
+    return out;
+  }
+
+  return { sobras: sobras, piezaSugerida: piezaSugerida, rindeCon: rindeCon, PIEZAS: PIEZAS, porPaq: porPaq, piezas: piezas, conPiezas: conPiezas, conEquivalente: conEquivalente, nombrePieza: nombrePieza, trasCorreccion: trasCorreccion, trasCompra: trasCompra, aprende: aprende,
     faltaDe: faltaDe, anotarCompra: anotarCompra, MOMENTOS: MOMENTOS, leerMenu: leerMenu, interna: interna, estadoIngredientes: estadoIngredientes, delRecetario: delRecetario,
     UNIDADES: UNIDADES, partes: partes, equivalente: equivalente, ajustarNivel: ajustarNivel, textoUnidades: textoUnidades, textoNivel: textoNivel, sinReceta: sinReceta,
     catalogo: catalogo, sugerido: sugerido, clave: clave, enAlerta: enAlerta, resumen: resumen, diasQueDura: diasQueDura, recetas: recetas, cocinar: cocinar,

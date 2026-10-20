@@ -125,7 +125,8 @@ function guardarAlimento(it) { return A.guardar("despensa", it).then(function ()
 function buscar(id) { return (S.despensa || []).filter(function (x) { return x.id === id; })[0]; }
 function articulo(u) { return /as?$/.test(u || "") || /des$/.test(u || "") ? "la" : "el"; } // la bolsa, la libra, la unidad; el paquete, el litro
 // Selector "para cuántas porciones" que acompaña al botón "La preparé" (el día que hay visita se gasta más).
-function selPorciones() { return '<div class="fila"><label class="chico">Porciones <select data-veces>' + [1, 2, 3, 4, 5, 6].map(function (v) { return '<option value="' + v + '">' + v + '</option>'; }).join("") + '</select></label>'; }
+// pre: las porciones que salen marcadas (en el menú, las de la comida más sus sobras).
+function selPorciones(pre) { return '<div class="fila"><label class="chico">Porciones <select data-veces>' + [1, 2, 3, 4, 5, 6].map(function (v) { return '<option value="' + v + '"' + (v === pre ? " selected" : "") + '>' + v + '</option>'; }).join("") + '</select></label>'; }
 window.MQ.selPorciones = selPorciones;
 function ajustar(id, paso) {
   var it = buscar(id); if (!it) return;
@@ -388,12 +389,12 @@ $("cCopiar").addEventListener("click", function () {
     "1) Un resumen corto para leer: el menú día por día y qué debo comprar, con el costo aproximado.",
     "2) Al final, un bloque de código con un JSON como el de abajo. Lo voy a pegar en mi app para guardar el menú y las recetas, así que no cambies los nombres de los campos:",
     "",
-    '{"menu":[{"fecha":"' + hoy + '","desayuno":"nombre de la receta","almuerzo":"nombre de la receta o fuera","comida":"nombre de la receta"}],',
+    '{"menu":[{"fecha":"' + hoy + '","desayuno":"nombre de la receta","almuerzo":"nombre de la receta o fuera","comida":"nombre de la receta","recalentar":[]}],',
     ' "recetas":[{"nombre":"Arroz con huevo","momentos":["almuerzo","comida"],"ingredientes":[{"alimento":"Arroz","cantidad":1,"unidad":"porciones","texto":"1 taza de arroz"},{"alimento":"Huevos","cantidad":2,"unidad":"unidades","texto":"2 huevos"}],"pasos":["Cocine el arroz.","Fría los huevos y sírvalos encima."]}],',
     ' "compras":[{"alimento":"Pollo","cantidad":1,"unidad":"libras","precio":9000}]}',
     "",
     "Reglas del JSON:",
-    "- \"menu\": un elemento por día, con la fecha en formato AAAA-MM-DD. Cada nombre que uses ahí debe estar en \"recetas\" escrito igual.",
+    "- \"menu\": un elemento por día, con la fecha en formato AAAA-MM-DD. Cada nombre que uses ahí debe estar en \"recetas\" escrito igual.", "- \"recalentar\": en cada día, la lista de comidas de ese día que son sobras de una preparación anterior (por ejemplo [\"comida\"] si en la noche se calienta lo que sobró del almuerzo). Esas sobras llevan el mismo nombre de receta que la vez que se preparó. Si ese día no hay sobras, déjala vacía: [].",
     "- \"recetas\": cada una para una porción. En \"alimento\" usa el mismo nombre con que aparece en mi despensa cuando sea ese alimento, y en \"cantidad\" y \"unidad\" usa la unidad en que te lo listé: si dice porciones, tajadas o muslos, en eso (1 porción de arroz, 2 tajadas de pan); si dice libras o unidades, en eso. \"texto\" es la cantidad dicha de forma casera. Sal, aceite, agua y condimentos van con cantidad 0.",
     "- \"pasos\": frases cortas, una por paso.",
     "- \"compras\": lo que debo comprar para cumplir el menú, en la unidad en que se compra (bolsas, paquetes, libras, unidades); \"precio\" es el costo total aproximado de esa compra en pesos, sin puntos.");

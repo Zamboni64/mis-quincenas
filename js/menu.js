@@ -20,6 +20,10 @@ function recetaDe(nombre) { var k = Despensa.clave(nombre); return (S.recetas ||
 function momentoAhora() { var h = new Date().getHours(); return h < 10 ? "desayuno" : (h < 15 ? "almuerzo" : "comida"); }
 function etiqueta(f) { var hoy = A.hoyISO(), t = DIAS[fechaLocal(f).getDay()] + " " + A.corto(f);
   return f === hoy ? "Hoy, " + t : (f === sumarDias(hoy, 1) ? "Mañana, " + t : t.charAt(0).toUpperCase() + t.slice(1)); }
+// Cuándo es una comida, a partir de "AAAA-MM-DD|momento": "el almuerzo de hoy", "la comida de la noche de mañana", "el almuerzo del jueves 22 oct".
+var EN_MOMENTO = { desayuno: "el desayuno", almuerzo: "el almuerzo", comida: "la comida de la noche" };
+function cuando(key, como) { var p = key.split("|"), hoy = A.hoyISO(), dia = p[0] === hoy ? "de hoy" : p[0] === diaSel ? "del mismo día" : (p[0] === sumarDias(hoy, 1) ? "de mañana" : (p[0] === sumarDias(hoy, -1) ? "de ayer" : "del " + DIAS[fechaLocal(p[0]).getDay()] + " " + A.corto(p[0])));
+  var q = EN_MOMENTO[p[1]]; return (como === "de" ? q.replace(/^el /, "del ").replace(/^la /, "de la ") : q) + " " + dia; }
 function saldo() { var e = A.estadoQ(A.quincenaDe(A.hoyISO())); return e ? e.saldo : null; }
 
 /* Ingredientes y pasos de una receta, con lo que falta marcado. */
@@ -44,17 +48,23 @@ function render() {
   if (!d) M.innerHTML = lista.length ? '<div class="empty">No hay menú guardado para este día.</div>' :
     '<p class="muted" style="margin-bottom:10px">Claude le arma el menú de la semana con lo que tiene en la despensa y su presupuesto.</p>' +
     '<button class="primary" type="button" data-ir-pedir style="width:100%">Pedirle el menú a Claude</button>';
-  else M.innerHTML = MOMENTOS.map(function (m) {
+  var sob = Despensa.sobras(lista);
+  if (d) M.innerHTML = MOMENTOS.map(function (m) {
     var nombre = d[m], h = '<div class="receta"><div class="subt">' + TITULO[m] + '</div>';
     if (!nombre) return h + '<p>Sin plan para esta comida.</p></div>';
     if (nombre === "fuera") return h + '<b>Fuera de casa</b><p>No gasta despensa.</p></div>';
-    var r = recetaDe(nombre), hecho = d.hechos && d.hechos[m];
+    var r = recetaDe(nombre), hecho = d.hechos && d.hechos[m], so = sob[diaSel + "|" + m] || {};
     h += '<b>' + esc(nombre) + '</b>';
+    // Sobra: ya se cocinó antes; solo se calienta y no vuelve a descontar la despensa.
+    if (so.de) return h + '<p class="sobra">' + (hecho ? "Ya se lo comió." : "Es lo que sobró " + cuando(so.de, "de") + ": solo caliéntelo.") + '</p>' +
+      (r ? '<details><summary>Ingredientes y preparación</summary>' + detalle(r) + '</details>' : "") +
+      (hecho ? "" : '<button class="ghost" type="button" data-menu-sobra="' + m + '">Ya me lo comí</button>') + '</div>';
     if (!r) return h + '<p>La respuesta no trajo la receta de este plato.</p></div>';
     var falta = Despensa.estadoIngredientes(r, S.despensa || []).filter(function (g) { return g.estado !== "ok"; }).length;
+    if (so.para && !hecho) h += '<p class="sobra">Prepare ' + (so.para.length + 1) + " porciones: " + (so.para.length === 1 ? "una es " : "las otras son ") + "para " + so.para.map(function (k) { return cuando(k, "para"); }).join(" y ") + '.</p>';
     h += '<p>' + (hecho ? "Ya la preparó." : (falta ? "Le falta " + falta + (falta === 1 ? " ingrediente." : " ingredientes.") : "Tiene todo para prepararla.")) + '</p>';
     h += '<details' + (diaSel === hoy && m === momentoAhora() && !hecho ? " open" : "") + '><summary>Ingredientes y preparación</summary>' + detalle(r) + '</details>';
-    if (!hecho) h += window.MQ.selPorciones() + '<button class="ghost" type="button" data-menu-hecho="' + m + '">La preparé: descontar</button></div>';
+    if (!hecho) h += window.MQ.selPorciones(so.para ? so.para.length + 1 : 1) + '<button class="ghost" type="button" data-menu-hecho="' + m + '">La preparé: descontar</button></div>';
     return h + '</div>'; }).join("");
   // resumen del menú guardado
   $("mGuardado").hidden = !lista.length;
@@ -136,6 +146,7 @@ $("mGuardar").addEventListener("click", function () {
     tareas.push(A.guardar("recetas", rec).then(function () { ponerEn(S.recetas, rec); }));
   });
   r.dias.forEach(function (d) { var dia = { id: d.fecha, fecha: d.fecha, desayuno: d.desayuno, almuerzo: d.almuerzo, comida: d.comida, hechos: {} };
+    if (d.recalentar) dia.recalentar = d.recalentar;
     tareas.push(A.guardar("menu", dia).then(function () { ponerEn(S.menu, dia); })); });
   if (r.dias.length || r.compras.length) { var com = { id: "compras", lista: r.compras, creado: hoy };
     tareas.push(A.guardar("menu", com).then(function () { ponerEn(S.menu, com); })); }
@@ -163,7 +174,11 @@ $("cSugBorrar").addEventListener("click", function () { var b = this; if (!dosTo
   A.eliminar("menu", "compras").then(function () { quitarDe("menu", "compras"); b.classList.remove("sure"); b.textContent = "Quitar esta lista"; A.render(); }).catch(function () {});
 });
 document.addEventListener("click", function (e) {
-  var b = e.target.closest("[data-menu-hecho],[data-quitar-receta],[data-comprar],[data-desmarcar]"); if (!b) return;
+  var b = e.target.closest("[data-menu-hecho],[data-menu-sobra],[data-quitar-receta],[data-comprar],[data-desmarcar]"); if (!b) return;
+  // "Ya me lo comí" en una sobra: solo la marca hecha; lo que gastó ya se descontó al prepararla.
+  if (b.dataset.menuSobra) { var ds = diaDe(diaSel); if (!ds) return; b.disabled = true;
+    var dz = Object.assign({}, ds); dz.hechos = Object.assign({}, ds.hechos || {}); dz.hechos[b.dataset.menuSobra] = true;
+    A.guardar("menu", dz).then(function () { ponerEn(S.menu, dz); A.render(); }).catch(function () { b.disabled = false; }); return; }
   if (b.dataset.desmarcar) { var doc = docCompras(), i = +b.dataset.desmarcar; if (!doc || !doc.lista[i]) return;
     var d2 = Object.assign({}, doc); d2.lista = doc.lista.map(function (x, j) { if (j !== i) return x; var y = Object.assign({}, x); y.comprado = 0; return y; });
     A.guardar("menu", d2).then(function () { ponerEn(S.menu, d2); A.render(); }).catch(function () {}); return; }

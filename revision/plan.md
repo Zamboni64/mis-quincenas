@@ -102,6 +102,7 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [x] Prefiere preparaciones que rindan para 2 o 3 comidas, porque vive solo.
 - [x] Poca arepa: solo si no hay otra opción.
 - [x] Almuerzos fuera por días de la semana (Lun a Dom): se marcan los días de oficina y Claude pone ese almuerzo como "fuera", con desayuno rápido y comida para la noche. Se guarda { semana, dias, cuales }; los datos viejos con solo el número siguen sirviendo.
+- [x] Sobras en el menú: Claude marca "recalentar" en cada día; la comida que sobra dice "solo caliéntelo" y "Ya me lo comí" no vuelve a descontar. La preparación original pide 2 o más porciones. Menús sin la marca: se adivina en almuerzos y comidas que repiten plato hasta 2 días después (nunca en desayunos).
 
 ## Descartado o aplazado
 
