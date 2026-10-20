@@ -203,9 +203,10 @@ ul.ings li.opc::before{content:"\2013";color:var(--muted)}
 .cifras-ocultas #heroBig::after{content:"$ \2022\2022\2022\2022\2022\2022"}
 .cifras-ocultas #heroSub::after{content:"Cifras ocultas. Toque el ojo para verlas."}
 .cifras-ocultas .stat b::after{content:"\2022\2022\2022\2022"}
-/* Grupo 6: almuerzos fuera de casa en botones del 0 al 7 */
+/* Almuerzos fuera de casa: un botón por día de la semana (se marcan los días de oficina) */
 .rotulo{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
-.seg.seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.seg.seg7{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.seg.seg7 button{padding:10px 0;font-size:13px}
 .seg button:disabled{opacity:.55}
 /* El selector "Mis Quincenas / Mis comidas" queda fijo arriba al desplazarse, para cambiar de sección sin volver a subir.
    Mismo fondo translúcido que la barra de abajo. scroll-padding evita que tape lo que la app lleva a la vista. */

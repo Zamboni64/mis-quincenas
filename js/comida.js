@@ -13,7 +13,27 @@ function diaSemana() { return (fechaLocal(A.hoyISO()).getDay() + 6) % 7; } // lu
 function lunes() { var d = fechaLocal(A.hoyISO()); d.setDate(d.getDate() - diaSemana());
   return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
 function ajusteSemana() { var x = S.P && S.P.almuerzos_semana; return x && typeof x === "object" ? x : null; }
-function almuerzosFuera() { var x = ajusteSemana(); if (!x || x.semana !== lunes()) return 0; var v = parseInt(x.dias, 10); return isNaN(v) ? 0 : Math.max(0, Math.min(7, v)); }
+/* Desde la 3.21 se guardan también cuáles días (cuales: 0 = lunes … 6 = domingo), para que el menú de Claude ponga "fuera" justo esos días.
+   Los datos viejos solo traen el número (dias) y siguen valiendo. */
+function diasFuera() { var x = ajusteSemana(); if (!x || x.semana !== lunes() || !Array.isArray(x.cuales)) return [];
+  return x.cuales.map(function (d) { return parseInt(d, 10); }).filter(function (d) { return d >= 0 && d <= 6; }); }
+function almuerzosFuera() { var x = ajusteSemana(); if (!x || x.semana !== lunes()) return 0; if (Array.isArray(x.cuales)) return diasFuera().length;
+  var v = parseInt(x.dias, 10); return isNaN(v) ? 0 : Math.max(0, Math.min(7, v)); }
+var NOMBRE_DIA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
+function juntar(L) { return L.length < 2 ? L.join("") : L.slice(0, -1).join(", ") + " y " + L[L.length - 1]; }
+function isoLocal(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+/* Lo que se le pide a Claude para los días de oficina que caen dentro del menú: almuerzo "fuera", desayuno rápido y comida para la noche.
+   Solo se sabe la semana en curso; si el menú pasa al lunes siguiente, esos días se asumen en casa. */
+function textoOficina(hoy, nDias) {
+  var of = diasFuera(), d0 = fechaLocal(hoy), fin = fechaLocal(lunes()), en = [], cruza = false, i, d;
+  fin.setDate(fin.getDate() + 7);
+  for (i = 0; i < nDias; i++) { d = new Date(d0); d.setDate(d0.getDate() + i);
+    if (d >= fin) { cruza = true; continue; }
+    if (of.indexOf((d.getDay() + 6) % 7) >= 0) en.push(NOMBRE_DIA[(d.getDay() + 6) % 7] + " " + A.corto(isoLocal(d))); }
+  if (!of.length) return almuerzosFuera() ? " Los días que almuerzo fuera de casa (elige tú cuáles, entre semana), pon el almuerzo como \"fuera\"." : "";
+  return (en.length ? " Los días que voy a la oficina (" + juntar(en) + ") pon el almuerzo como \"fuera\". Esos días el desayuno debe ser rápido, listo en unos 15 minutos antes de salir a trabajar, y la comida algo fácil de preparar en la noche al volver." : "") +
+    (cruza ? " Para los días de la semana siguiente todavía no sé si voy a la oficina: asume que almuerzo en casa." : "");
+}
 function semanaSinElegir() { var x = ajusteSemana(); return !x || x.semana !== lunes(); }
 function diasQueDura(comidas) { return Despensa.diasQueDura(comidas, almuerzosFuera(), 7 - diaSemana()); }
 function textoRitmo() { var f = almuerzosFuera(); return f === 0 ? "a 3 comidas diarias en casa" : (f === 7 ? "sin contar los almuerzos de esta semana, que hace fuera de casa" : "contando " + f + (f === 1 ? " almuerzo" : " almuerzos") + " fuera de casa esta semana"); }
@@ -29,9 +49,9 @@ function propias() { return (S.recetas || []).map(function (r) { return Despensa
 /* ---------- dibujar ---------- */
 function render() {
   var items = S.despensa || [], r = Despensa.resumen(items, 3), saldo = saldoQuincena();
-  var fuera = String(almuerzosFuera());
-  Array.prototype.forEach.call($("cFuera").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === fuera)); b.disabled = !S.P; });
-  if (!avisoGuardado) $("cFueraMsg").textContent = (ajusteSemana() && semanaSinElegir() ? "Empezó una semana nueva: elija si esta semana almuerza fuera. " : "") + "Vale solo para esta semana, hasta el domingo. El lunes vuelve a «Ninguno» para que elija de nuevo.";
+  var marcados = diasFuera();
+  Array.prototype.forEach.call($("cFuera").children, function (b) { b.setAttribute("aria-pressed", String(marcados.indexOf(+b.dataset.d) >= 0)); b.disabled = !S.P; });
+  if (!avisoGuardado) $("cFueraMsg").textContent = (ajusteSemana() && semanaSinElegir() ? "Empezó una semana nueva: marque los días que almuerza fuera. " : "") + (almuerzosFuera() && !diasFuera().length ? "Esta semana marcó " + almuerzosFuera() + " día(s) sin decir cuáles: tóquelos para que el menú los tenga en cuenta. " : "") + "Vale solo para esta semana, hasta el domingo. El lunes se borra para que elija de nuevo.";
   // resumen
   if (!items.length) { $("cBig").textContent = "–"; $("cSub").textContent = "Agregue sus alimentos para ver el estimado."; }
   else {
@@ -318,13 +338,14 @@ document.addEventListener("click", function (e) {
   }
 });
 A.segmento("cMomento", function (v) { momento = v; render(); });
-// Cuántos días almuerza fuera: se guarda con los datos del presupuesto para que también se sincronice.
-// Botones del 0 al 7 (7 = todos los días). Se guarda igual que antes: { semana, dias }.
-$("cFuera").addEventListener("click", function (e) { var b = e.target.closest("button[data-v]"); if (!b || !S.P) return;
-  Array.prototype.forEach.call(this.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); });
-  var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_semana = { semana: lunes(), dias: parseInt(b.dataset.v, 10) || 0 }; delete P.almuerzos_fuera;
+// Qué días almuerza fuera: se guarda con los datos del presupuesto para que también se sincronice.
+// Un botón por día: se marcan o desmarcan los días de oficina. Se guarda { semana, dias, cuales }; dias sigue siendo el número, para el estimado.
+$("cFuera").addEventListener("click", function (e) { var b = e.target.closest("button[data-d]"); if (!b || !S.P) return;
+  b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+  var cuales = Array.prototype.filter.call(this.children, function (x) { return x.getAttribute("aria-pressed") === "true"; }).map(function (x) { return +x.dataset.d; });
+  var msg = $("cFueraMsg"), P = JSON.parse(JSON.stringify(S.P)); P.almuerzos_semana = { semana: lunes(), dias: cuales.length, cuales: cuales }; delete P.almuerzos_fuera;
   avisoGuardado = true;
-  A.guardarDatos(P).then(function () { msg.textContent = "Guardado para esta semana. El estimado de días ya lo tiene en cuenta."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
+  A.guardarDatos(P).then(function () { msg.textContent = cuales.length ? "Guardado para esta semana. El estimado y el menú de Claude ya lo tienen en cuenta." : "Guardado: esta semana almuerza en casa todos los días."; }).catch(function () { msg.textContent = "No se pudo guardar en este dispositivo."; }); });
 $("notaDespensa").addEventListener("click", function () { A.irA("despensa"); });
 
 /* ---------- texto para preguntarle a Claude ---------- */
@@ -336,7 +357,9 @@ function lineasDespensa() {
       (P ? "; cada " + u + " trae " + Despensa.cant(P) + " " + Despensa.nombrePieza(it, P) : "") +
       (it.precio ? (P ? " y cuesta unos " + money(it.precio) : ", precio aproximado " + money(it.precio) + " c/u") : "")); });
   L.push("Estimado de la app: me alcanza para unas " + r.comidas + " comidas completas, cerca de " + Despensa.cant(diasQueDura(r.comidas)) + " día(s).");
-  L.push(almuerzosFuera() ? "Esta semana almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s)") + ", así que esos almuerzos no salen de la despensa. Hay semanas en que almuerzo fuera y otras en que no."
+  var of = diasFuera().map(function (d) { return NOMBRE_DIA[d]; });
+  if (of.length) L.push("Esta semana voy a la oficina y almuerzo fuera de casa el " + juntar(of) + ", así que esos almuerzos no salen de la despensa. Los demás días trabajo desde casa.");
+  else L.push(almuerzosFuera() ? "Esta semana almuerzo fuera de casa " + (almuerzosFuera() === 7 ? "todos los días" : almuerzosFuera() + " día(s)") + ", así que esos almuerzos no salen de la despensa. Hay semanas en que almuerzo fuera y otras en que no."
     : "Esta semana almuerzo en casa todos los días.");
   return L;
 }
@@ -360,7 +383,7 @@ $("cCopiar").addEventListener("click", function () {
   }
   txt.push("", "LO QUE NECESITO",
     "Arma mi menú para " + (nDias === 1 ? "hoy" : "los próximos " + nDias + " días, empezando hoy") + " con desayuno, almuerzo y comida. Usa primero lo que ya tengo, que sean recetas sencillas, y que lo que haya que comprar no se pase de mi presupuesto." +
-    (almuerzosFuera() ? " Los días que almuerzo fuera de casa (elige tú cuáles, entre semana), pon el almuerzo como \"fuera\"." : ""),
+    textoOficina(hoy, nDias),
     "", "Respóndeme en dos partes:",
     "1) Un resumen corto para leer: el menú día por día y qué debo comprar, con el costo aproximado.",
     "2) Al final, un bloque de código con un JSON como el de abajo. Lo voy a pegar en mi app para guardar el menú y las recetas, así que no cambies los nombres de los campos:",

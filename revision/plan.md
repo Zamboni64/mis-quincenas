@@ -87,7 +87,7 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [x] D3: esconder la tarjeta de vencidos cuando no hay ninguno.
 - [x] D4: confirmación con lo que queda libre después de registrar una compra.
-- [x] D5: botones de almuerzos fuera de casa, del 0 al 7.
+- [x] D5: botones de almuerzos fuera de casa, del 0 al 7. (Luego cambiados por días de la semana, Grupo 8.)
 - [x] D6: nuevo estado vacío del Menú.
 
 ### Grupo 7 · Revisión cruzada y publicación
@@ -101,6 +101,7 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [x] Le dice a Claude que hay freidora de aire y que no use olla a presión.
 - [x] Prefiere preparaciones que rindan para 2 o 3 comidas, porque vive solo.
 - [x] Poca arepa: solo si no hay otra opción.
+- [x] Almuerzos fuera por días de la semana (Lun a Dom): se marcan los días de oficina y Claude pone ese almuerzo como "fuera", con desayuno rápido y comida para la noche. Se guarda { semana, dias, cuales }; los datos viejos con solo el número siguen sirviendo.
 
 ## Descartado o aplazado
 
