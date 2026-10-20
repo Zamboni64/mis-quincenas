@@ -72,7 +72,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end}
 .valor input{font-family:var(--display);font-size:24px;font-weight:700}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.seg button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px;font:inherit;font-weight:600;cursor:pointer}
+.seg button{min-height:44px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px;font:inherit;font-weight:600;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 .primary:disabled{opacity:.55}

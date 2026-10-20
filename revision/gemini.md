@@ -258,3 +258,75 @@
   - `[visual]` (CSS / HTML): **35 problemas**. Casi la totalidad de las mejoras se pueden resolver ajustando estilos, jerarquías visuales, contrastes de color, tamaños de hit-target y orden semántico en el marcado.
   - `[lógica]` (JavaScript / Datos): **1 problema** (manejo y deduplicación de estados en listas de pagos vencidos vs del mes).
 - **Cobertura:** 10 pestañas revisadas individualmente (5 de Mis Quincenas + 5 de Mis comidas) más la navegación global, tanto en Modo Claro como en Modo Oscuro sobre resolución nativa de iPhone (390×844 px).
+
+---
+
+## 12. Revisión cruzada de los Grupos 5, 5b y 6 (Trabajo de Claude)
+
+**Fecha de revisión:** 2026-10-20  
+**Evaluador:** Gemini (Antigravity)  
+**Alcance revisado:** Commits `26de01d` (Grupo 5), `9859da0` (Grupo 5b) y `1b4d2b3` (Grupo 6) mediante `git diff 028ff90..HEAD`.  
+**Metodología:** Inspección de código, cálculo de ratios de contraste WCAG, y pruebas dinámicas automatizadas en Chrome simulando iPhone (390×844 px, 375×812 px y 320×568 px) en Modo Claro y Modo Oscuro con datos ficticios completos.
+
+### 12.1. Hallazgos del Grupo 5: Textos que arma la programación
+
+1. **Ingresos — Ayuda de destino en lista de pasos (3.2):**
+   - **Evaluación:** Excelente. La ayuda `#iAyuda` para «Colchón y deudas» se transformó de un bloque de texto denso a una lista ordenada `<ol class="pasos">` con 4 puntos jerárquicos claros. Reduce drásticamente la carga cognitiva sin alterar el orden financiero definido en `motor.js`.
+2. **Plan — Mes de libertad financiera destacado (4.3):**
+   - **Evaluación:** Muy acertado. La fecha de fin de deudas se muestra en 24 px (`font-weight: 800`, color `--accent`) en la cabecera de la nota resumen, mientras la deuda total pasa a tipografía secundaria (`.small`). Le otorga al logro principal de la app el peso visual motivador que requería.
+3. **Compras — Mensaje previo y estado vacío motivador (9.1 y 9.2):**
+   - **Evaluación:** Funciona perfectamente. La indicación *«Se guarda como gasto de Mercado de hoy.»* junto al botón `#coBtn` previene dudas operativas. Cuando no hay pendientes por comprar, el mensaje *«✓ Por ahora no le falta nada en la despensa.»* aporta un estado de tranquilidad inmediato.
+4. **Recetas — Desglose de faltantes y costos (8.3):**
+   - **Evaluación:** Gran mejora en escaneabilidad. Los ingredientes faltantes aparecen en pastillas individuales (`.pill.warn`) y el faltante en dinero en números tabulares (`.num`), facilitando decidir si preparar una receta o ir al supermercado.
+5. **Freidora y Menú — Rótulos y pastillas de tiempo (6.3 y 10.3):**
+   - **Evaluación:** Los títulos de cada comida en el Menú (`.subt`) adoptan el color de acento y 12 px en negrita. En la freidora, la temperatura y tiempo usan la clase `.pill.tiempo` con contraste óptimo en ambos temas (16:1 en claro, 13.5:1 en oscuro).
+6. **Controles segmentados — Distinción del botón seleccionado (D2):**
+   - **Evaluación:** La regla `.seg button[aria-pressed="true"]` ahora aplica relleno sólido `--accent` con texto `--accent-ink`. Resuelve definitivamente la ambigüedad que existía en el selector de medios de pago, momentos del día y tipos de alimentos.
+
+### 12.2. Hallazgos del Grupo 5b: Pulido visual, Paleta Cobalto y Ocultar cifras
+
+1. **Paleta «Cobalto» (Visual y Accesibilidad):**
+   - **Evaluación:** Impecable. El paso del verde salvia a los tonos Cobalto y Azul Noche (`#0B1E4F` claro / `#13296A` oscuro) aporta sobriedad y elegancia técnica.
+   - **Medición de contrastes:**
+     - Tarjeta principal (Hero): **16.0:1** en Modo Claro; **13.5:1** en Modo Oscuro.
+     - Botones primarios: **5.52:1** en Modo Claro; **6.74:1** en Modo Oscuro.
+     - Texto principal sobre superficie: **18.05:1** en Claro; **15.43:1** en Oscuro.
+     - Pestañas activas: **4.75:1** en Claro; **5.88:1** en Oscuro.
+     - Todas las combinaciones superan con holgura el umbral WCAG AA (4.5:1).
+2. **Tratamiento de tarjetas y bordes:**
+   - **Evaluación:** En Modo Claro las tarjetas no usan borde (`--card-line: transparent`) y descansan sobre el fondo frío `#F3F5F8`, logrando una apariencia limpia y plana. En Modo Oscuro incorporan un borde sutil `#1E242C` que evita que se fundan con el fondo `#0B0E13`. Las esquinas redondeadas de 16 px se integran de forma natural con el lenguaje de iOS.
+3. **Botón de Ojo para ocultar cifras (`#heroOjo`):**
+   - **Evaluación:** Destacada función de privacidad.
+     - Área táctil de **44×44 px** en la esquina superior derecha del hero.
+     - Iconografía SVG reactiva (ojo abierto / ojo tachado) con atributos de accesibilidad coherentes (`aria-pressed`, `aria-label`).
+     - Técnica CSS limpia: los números reales se mantienen en el DOM con `visibility: hidden` y se reemplazan visualmente por `::after` con viñetas `••••••`, garantizando que la estructura no sufra saltos de línea ni redimensionamientos abruptos.
+     - Persistencia en `localStorage` (`mq-ocultar`), independiente de los datos sincronizados y del respaldo JSON.
+4. **Navegación e interacciones móviles:**
+   - **Evaluación:** Los botones de navegación (`#qPrev`, `#qNext`, `#mPrev`, `#mNext`) ahora incluyen vectores SVG perfectamente centrados. La barra inferior con `backdrop-filter: saturate(180%) blur(18px)` y opacidad al 86% replica con precisión la barra de navegación nativa de iOS. El selector superior de sección utiliza un subrayado limpio de 2 px con color acento.
+
+### 12.3. Hallazgos del Grupo 6: Cambios con lógica aprobados (D3 a D6)
+
+1. **D3 — Ocultamiento condicional de tarjeta de vencidos en Pagos:**
+   - **Comportamiento verificado:**
+     - Con pagos vencidos o por vencer: la tarjeta se muestra normalmente con sus elementos interactivos.
+     - Al marcar todos los pagos pendientes: la tarjeta `#pgAlerta` se oculta automáticamente (`hidden = true`) y la nota superior muestra *"Todo al día."*.
+     - Al desmarcar un pago: la tarjeta reaparece instantáneamente sin parpadeos ni errores en consola.
+2. **D4 — Saldo disponible tras registrar compra:**
+   - **Comportamiento verificado:** Al registrar una compra en la pestaña Compras, el mensaje de éxito incorpora de inmediato el estado financiero actual: *"Listo: [Producto] quedó en [X] y se descontaron [Y] de la quincena. Le quedan [Z] libres en la quincena."* (o el aviso de sobregiro si el saldo es negativo). Evita desplazarse innecesariamente a la pestaña Hoy para confirmar el margen restante.
+3. **D5 — Botones de almuerzos fuera de casa (0 a 7):**
+   - **Comportamiento verificado:**
+     - Reemplazo exitoso del `<select>` por una cuadrícula ergonómica de 8 botones (`.seg.seg4`).
+     - A 390 px y 375 px, cada botón alcanza **43.8 px de altura táctil** (prácticamente el estándar de 44 px).
+     - A 320 px, el texto no se desborda (`scrollWidth === clientWidth`) y los botones mantienen proporción táctil cómoda.
+     - La selección se guarda inmediatamente en `S.P.almuerzos_semana` con el esquema `{ semana: lunes(), dias: X }`, recalculando en tiempo real el estimado de días de comida en Despensa y preservando la sincronización en la nube.
+4. **D6 — Estado vacío activo en Menú del día:**
+   - **Comportamiento verificado:** Si no hay menú registrado, en lugar de un aviso estático vacío se ofrece el botón principal *«Pedirle el menú a Claude»*. Al pulsarlo, ejecuta un scroll suave (`smooth`) hacia la tarjeta de generación de menú y sitúa el foco del teclado en el botón de copiado de despensa (`#cCopiar`).
+
+### 12.4. Conclusión de la revisión cruzada
+
+La totalidad de los cambios introducidos por Claude en los Grupos 5, 5b y 6:
+- **Cumplen estrictamente con la regla N7:** no se alteraron ni eliminaron IDs, atributos `data-*` ni clases requeridas por la lógica.
+- **Mantienen intacto el contrato de datos:** no se modificó la estructura de guardado, sincronización ni respaldo.
+- **Elevan la experiencia de usuario:** la combinación de la paleta Cobalto, los nuevos textos guiados, la botonera de almuerzos y el botón de privacidad consolidan el objetivo del *"tablero tranquilo"* para uso diario en el iPhone.
+
+El proyecto queda en estado óptimo para proceder con el **Grupo 7 (Revisión cruzada final, verificación de versiones y publicación)**.
