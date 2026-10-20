@@ -207,3 +207,7 @@ ul.ings li.opc::before{content:"\2013";color:var(--muted)}
 .rotulo{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .seg.seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .seg button:disabled{opacity:.55}
+/* El selector "Mis Quincenas / Mis comidas" queda fijo arriba al desplazarse, para cambiar de sección sin volver a subir.
+   Mismo fondo translúcido que la barra de abajo. scroll-padding evita que tape lo que la app lleva a la vista. */
+html{scroll-padding-top:64px}
+.wrap>.top{position:sticky;top:0;z-index:90;margin:calc(-14px - env(safe-area-inset-top,0px)) -16px 0;padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:color-mix(in srgb,var(--bg) 86%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid var(--line)}

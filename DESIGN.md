@@ -272,7 +272,7 @@ Esquinas suaves y amables, más redondas cuanto más grande es la pieza: 10 px e
 
 ### Navigation
 - **Pestañas de abajo:** cinco por sección, con texto de 12 px y 600 en tinta suave. La barra es translúcida con desenfoque, como las del iPhone. La elegida va con fondo verde niebla y texto cobalto. **Nuevo:** cada pestaña mide al menos 44 px de alto.
-- **Selector de sección (arriba):** "Mis Quincenas" y "Mis comidas" como texto de 17 px. El elegido va en tinta y 700, subrayado con una línea verde de 2 px. **Nuevo:** área de toque de 44 px.
+- **Selector de sección (arriba):** "Mis Quincenas" y "Mis comidas" como texto de 17 px. Queda fijo arriba al desplazarse, con el mismo fondo translúcido de la barra de abajo y una línea fina debajo, para cambiar de sección sin volver a subir. El elegido va en tinta y 700, subrayado con una línea verde de 2 px. **Nuevo:** área de toque de 44 px.
 
 ### Casilla de pago
 La casilla cuadrada, con esquinas de 9 px, que marca un pago como hecho. Vacía: borde de línea de 2 px. Marcada: verde lleno con un chulo en la tinta sobre verde. **Nuevo:** mide 36 px a la vista y 44 px de área de toque, y el chulo nunca va en `#fff` fijo.

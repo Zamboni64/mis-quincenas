@@ -80,7 +80,8 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 - [x] Barra de pestañas translúcida; respuesta suave al tocar botones; color de selección y cursor del tema.
 - [x] Paleta "Cobalto" (elegida por el usuario, reemplaza a "Salvia y marfil"): tarjeta principal azul noche, acciones en cobalto y neutros fríos, en claro y oscuro. Todo texto pasa 4,5:1 y el detector de Impeccable da 0 avisos.
 - [x] Botón de ojo en Hoy para ocultar lo que queda de la quincena y las tres cifras (pedido por el usuario). Se guarda en el dispositivo, no en los datos.
-- [ ] Verlo en el iPhone: el desenfoque de la barra de abajo y el subrayado del selector de arriba.
+- [x] Verlo en el iPhone: el desenfoque de la barra de abajo y el subrayado del selector de arriba.
+- [x] Selector "Mis Quincenas / Mis comidas" fijo arriba al desplazarse (pedido por el usuario).
 
 ### Grupo 6 · Cambios con lógica · Claude · solo lo aprobado en D3 a D6
 Antes de este grupo, el usuario guarda un respaldo desde la app.
@@ -91,7 +92,7 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 
 ### Grupo 7 · Revisión cruzada y publicación
 - [x] Gemini revisa lo de Claude y Claude revisa lo de Gemini, con `git diff main`.
-- [ ] Ver en el iPhone el globito de "Pagos" (11.2), el color de la barra del sistema en modo oscuro (N5) y la sombra derecha de la tabla del Plan, que se debe apagar al llegar al final (Grupo 3).
+- [x] Ver en el iPhone el globito de "Pagos" (11.2), el color de la barra del sistema en modo oscuro (N5) y la sombra derecha de la tabla del Plan, que se debe apagar al llegar al final (Grupo 3).
 - [ ] Subir `VERSION` en `sw.js` y `VERSION_APP` en `js/app.js`, con el mismo número.
 - [ ] Publicar en `main` solo con permiso del usuario.
 
