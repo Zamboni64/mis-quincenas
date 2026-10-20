@@ -68,7 +68,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visi
 .valor input{font-family:var(--display);font-size:24px;font-weight:700}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .seg button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px;font:inherit;font-weight:600;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--soft);border-color:var(--accent);color:var(--accent)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 .primary:disabled{opacity:.55}
 .list{display:flex;flex-direction:column}
@@ -173,3 +173,10 @@ label.chico select{width:auto;padding:7px 8px;font-size:16px}
 ul.ings li.opc{color:var(--muted)}
 ul.ings li.opc::before{content:"\2013";color:var(--muted)}
 #frOtrasCard details{padding:0}
+/* Grupo 5: textos que arma la programación */
+#iAyuda ol.pasos{font-size:13px;margin:4px 0}
+.receta .faltan{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:13px;color:var(--muted);margin:4px 0}
+#planResumen .libre{display:block;font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.01em;color:var(--accent);margin:2px 0 4px}
+#planResumen .small{display:block;color:var(--muted)}
+#mDia .subt{color:var(--accent);font-size:12px}
+.pill.tiempo{color:var(--ink);font-size:13px}

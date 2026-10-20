@@ -153,8 +153,9 @@ function renderPagos() {
 /* ---------- INGRESOS ---------- */
 function origenDe(x) { return x.origen || x.concepto || "Ingreso extra"; }
 var destino = "deudas";
-function ayudaDestino() { $("iAyuda").textContent = destino === "gastar" ? "Se suma a lo libre de la quincena de esa fecha." :
-  "Antes de la prima de diciembre se reparte así: colchón hasta la meta, luego el primo, luego Apple y el resto a capital de Davivienda. Después de la prima, todo va a capital."; }
+// El orden en lista se lee más rápido que en un párrafo; es el mismo reparto que hace Motor.
+function ayudaDestino() { $("iAyuda").innerHTML = destino === "gastar" ? "Se suma a lo libre de la quincena de esa fecha." :
+  "Antes de la prima de diciembre se reparte en este orden:<ol class=\"pasos\"><li>Colchón, hasta llegar a la meta.</li><li>Lo que se le debe al primo.</li><li>Apple.</li><li>El resto, a capital de Davivienda.</li></ol>Después de la prima, todo va a capital."; }
 function renderIngresos() {
   var P = S.P, R = S.calc && S.calc.reparto;
   var sel = $("iOrigen"), ops = ((P && P.meDeben) || []).map(function (m) { return m.nombre; }).concat(["Trabajo extra", "Otro"]);
@@ -179,7 +180,8 @@ function mesTxt(k) { return k ? Motor.mesTxt(k) : "después de 2029"; }
 function renderPlan() {
   var c = S.calc; if (!c) { $("planResumen").textContent = "Aún no hay datos del plan."; return; }
   var pl = c.plan;
-  $("planResumen").innerHTML = "Deuda total al 2 oct 2026: <b class=\"num\">" + money(pl.totalHoy) + "</b>. Con el plan queda libre de deudas en <b>" + esc(mesTxt(pl.finTodo)) + "</b>.";
+  // El mes en que queda libre es la meta de todo el plan: va grande, y la deuda total como detalle.
+  $("planResumen").innerHTML = "Con el plan queda libre de deudas en<b class=\"libre\">" + esc(mesTxt(pl.finTodo)) + "</b><span class=\"small\">Deuda total al 2 oct 2026: <b class=\"num\">" + money(pl.totalHoy) + "</b></span>";
   $("planFin").innerHTML = [["Primo", "dic. 2026, con la prima"], ["Libranza Davivienda", mesTxt(pl.finDav)], ["Tarjeta Davibank", mesTxt(pl.finCard)], ["Libranza Banco de Occidente", mesTxt(pl.finOcc)]]
     .map(function (a) { return '<div class="item"><div class="tx"><b>' + esc(a[0]) + '</b></div><span class="pill plain">' + esc(a[1]) + '</span></div>'; }).join("");
   var filas = [], i; for (i = 0; i < pl.filas.length; i++) { filas.push(pl.filas[i]); if (pl.filas[i].total === 0) break; }

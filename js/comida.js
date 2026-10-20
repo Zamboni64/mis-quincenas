@@ -55,8 +55,10 @@ function render() {
     else html += '<div class="empty">Con lo que tiene no sale ninguna receta del recetario para este momento.</div>';
     if (x.casi.length) html += '<div class="subt">Comprando una o dos cosas</div>' + x.casi.slice(0, 5).map(function (a) {
       var costo = 0, sin = false; a.faltan.forEach(function (f) { if (f.precio) costo += f.precio * Math.max(1, Math.ceil(f.necesita - f.tiene)); else sin = true; });
-      var precio = sin ? "" : " Comprarlo cuesta unos " + money(costo) + (saldo != null ? (costo <= saldo ? ", y le alcanza." : ", y no le alcanza con lo que queda de la quincena.") : ".");
-      return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><p>Le falta: ' + esc(a.faltan.map(function (f) { return f.nombre.toLowerCase(); }).join(" y ")) + '.' + esc(precio) + '</p></div>'; }).join("");
+      var precio = sin ? "" : "Comprarlo cuesta unos <b class=\"num\">" + money(costo) + "</b>" + (saldo != null ? (costo <= saldo ? ", y le alcanza." : ", y no le alcanza con lo que queda de la quincena.") : ".");
+      // Lo que falta va en pastillas para leerlo de un vistazo en el supermercado.
+      return '<div class="receta"><b>' + esc(a.receta.nombre) + '</b><div class="faltan">Le falta: ' + a.faltan.map(function (f) { return '<span class="pill warn">' + esc(f.nombre.toLowerCase()) + '</span>'; }).join("") + '</div>' +
+        (precio ? '<p>' + precio + '</p>' : '') + '</div>'; }).join("");
     var sin = Despensa.sinReceta(items, propias());
     if (sin.length) html += '<p class="small muted" style="margin-top:10px">Aún no hay recetas con: ' + esc(sin.map(function (i) { return i.nombre.toLowerCase(); }).join(", ")) +
       '. Pídale el menú a Claude desde la pestaña Menú y las recetas que le dé quedan guardadas aquí.</p>';
@@ -82,7 +84,7 @@ function render() {
   renderHechas();
   // lista de compras con presupuesto
   var lc = Despensa.listaCompras(items), C = $("cCompras");
-  if (!lc.lista.length) C.innerHTML = '<div class="empty">No le falta nada por ahora.</div>';
+  if (!lc.lista.length) C.innerHTML = '<div class="note ok">✓ Por ahora no le falta nada en la despensa.</div>';
   else {
     var pie = '<div class="kv tot"><span>Costo estimado</span><span class="num">' + money(lc.total) + '</span></div>';
     if (lc.sinPrecio) pie += '<p class="small muted">' + lc.sinPrecio + ' producto(s) no tienen precio registrado y no están en la suma. El precio se guarda al registrar una compra.</p>';

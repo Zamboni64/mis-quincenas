@@ -182,7 +182,7 @@ function detalle(v) {
 }
 function tarjeta(v, sale) {
   var t = tiempo(v);
-  return '<div class="receta"><b>' + esc(v.nombre) + '</b><p>' + (t ? '<span class="pill plain">' + esc(t) + '</span> ' : '') +
+  return '<div class="receta"><b>' + esc(v.nombre) + '</b><p>' + (t ? '<span class="pill plain tiempo">' + esc(t) + '</span> ' : '') +
     (sale ? "Tiene todo para prepararla." : "Le falta: " + esc(v.faltan.join(", ")) + ".") + (v.guardada ? " Receta de Claude." : "") + '</p>' +
     '<details><summary>Ingredientes y preparación</summary>' + detalle(v) + '</details>' +
     (sale ? window.MQ.selPorciones() + '<button class="ghost" type="button" data-freir="' + esc(v.llave) + '">La preparé: descontar</button></div>' : '') + '</div>';

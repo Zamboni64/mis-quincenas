@@ -65,12 +65,13 @@ Mínimo 44 px de área táctil. El dibujo puede quedar algo más chico.
 - [x] Compactar un poco el espacio entre filas del formulario de gasto, sin achicar los campos (1.4).
 
 ### Grupo 5 · Textos que arma la programación · Claude · prioridad baja
-- [ ] Compras: estado vacío con chulo y un mensaje positivo (9.1).
-- [ ] Recetas: lo que falta se muestra en pastillas y el costo aparte (8.3).
-- [ ] Compras: frase corta junto al botón, "Se guarda como gasto de Mercado de hoy" (9.2).
-- [ ] Ingresos: la ayuda de "Colchón y deudas" se muestra como lista corta de pasos, con el mismo contenido (3.2).
-- [ ] Plan: el mes en que queda libre de deudas, con letra más grande (4.3, sin barra de progreso).
-- [ ] Menú y Freidora: más peso a los rótulos de cada comida y a la pastilla de °C y minutos (6.3, 10.3).
+- [x] Compras: estado vacío con chulo y un mensaje positivo (9.1).
+- [x] Recetas: lo que falta se muestra en pastillas y el costo aparte (8.3).
+- [x] Compras: frase corta junto al botón, "Se guarda como gasto de Mercado de hoy" (9.2).
+- [x] Ingresos: la ayuda de "Colchón y deudas" se muestra como lista corta de pasos, con el mismo contenido (3.2).
+- [x] Plan: el mes en que queda libre de deudas, con letra más grande (4.3, sin barra de progreso).
+- [x] Menú y Freidora: más peso a los rótulos de cada comida y a la pastilla de °C y minutos (6.3, 10.3).
+- [x] Botón seleccionado con verde lleno (decisión D2): faltaba en los grupos y se hizo aquí, en `.seg`.
 
 ### Grupo 6 · Cambios con lógica · Claude · solo lo aprobado en D3 a D6
 Antes de este grupo, el usuario guarda un respaldo desde la app.
