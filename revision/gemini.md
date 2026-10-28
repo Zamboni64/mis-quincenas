@@ -330,3 +330,35 @@ La totalidad de los cambios introducidos por Claude en los Grupos 5, 5b y 6:
 - **Elevan la experiencia de usuario:** la combinación de la paleta Cobalto, los nuevos textos guiados, la botonera de almuerzos y el botón de privacidad consolidan el objetivo del *"tablero tranquilo"* para uso diario en el iPhone.
 
 El proyecto queda en estado óptimo para proceder con el **Grupo 7 (Revisión cruzada final, verificación de versiones y publicación)**.
+
+---
+
+## 13. Rediseño Apple Glass (iOS Materials)
+
+Por solicitud del usuario, se aplicó un acabado translúcido tipo Apple Glass sobre la rama `mejora-visual`, manteniendo intacta la lógica y la paleta Cobalto. Después de la revisión cruzada de Claude se corrigieron seis puntos (13.2). Lo que sigue describe el estado final.
+
+### 13.1. Cambios en `css/estilos.css`
+1. **Fondo con profundidad:** degradado radial suave desde arriba (`#E6ECF8` a `var(--bg)` en claro; `#131E38` a `var(--bg)` en oscuro).
+2. **Tarjetas (`.card`, `.stats`):** vidrio translúcido sin desenfoque (`--glass-bg`, 88 % en los dos temas), borde fino (`--glass-border`), brillo arriba (`--glass-shine`) y sombra ligera (`--glass-shadow`). Esquinas de 18 px.
+3. **Tarjeta principal de Hoy (`.hero`):** degradado cobalto y azul noche con brillo arriba y sombra azul, 20 px de esquina. En negativo (`.hero.neg`), el mismo acabado en rojo.
+4. **Controles:**
+   - Selectores segmentados (`.seg`): cápsula gris translúcida; el elegido va en cobalto con sombra suave. Cada botón mide 44 px de alto.
+   - Campos (`input`, `select`, `textarea`): fondo sólido, 11 px de esquina y foco con anillo cobalto suave.
+   - Botón principal (`.primary`): degradado cobalto con brillo arriba y sombra del mismo color, 13 px de esquina.
+   - Casilla de pago (`.check`), botones redondos (`.mini`, `.qnav button`) y fantasma (`.ghost`): fondo sólido con borde `--line`, para que se vean en claro.
+   - Avisos (`.note`): fondo de su estado con borde fino del mismo color, 14 px de esquina.
+5. **Barras fijas (`.wrap > .top`, `.tabs`):** las únicas con desenfoque (`saturate(180%) blur(20px)`), con fondo `--glass-bar`.
+
+### 13.2. Correcciones tras la revisión de Claude
+1. **Desenfoque:** se quitó `backdrop-filter` de las 12 reglas donde no pasa nada por detrás. Solo queda en las dos barras fijas.
+2. **Bordes en claro:** `.check`, `.mini`, `.qnav button` y `.ghost` recuperaron su borde `--line`; con el borde blanco translúcido casi no se veían.
+3. **Toque de 44 px:** se devolvió `min-height: 44px` a `.seg button` y `.seg.seg7 button`.
+4. **Pestaña elegida:** volvió a `background: var(--soft)` (4,75:1).
+5. **Columna fija del Plan:** volvió a fondo sólido `var(--surface)`, para que no se transparenten los números.
+6. **`DESIGN.md`:** la regla *Flat Calm* se cambió por *Glass Discipline*. Luego el usuario, con Claude, actualizó las demás frases y medidas que seguían describiendo la app plana.
+
+### 13.3. Criterios de accesibilidad y estabilidad
+- **Contraste:** los textos siguen por encima de 4,5:1.
+- **Rendimiento:** solo CSS, sin dependencias ni scripts nuevos.
+- **Regla N7:** no se renombró ningún `id`, `data-*` ni clase de control.
+- **Pendiente:** verlo en el iPhone en claro y oscuro, sobre todo la Despensa con muchos alimentos y la tabla del Plan.

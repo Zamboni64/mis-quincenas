@@ -82,12 +82,15 @@ typography:
   caption:
     fontSize: "13px"
 rounded:
-  casilla: "9px"
+  casilla: "10px"
   pastilla: "99px"
-  campo: "10px"
-  boton: "12px"
-  tarjeta: "16px"
-  hero: "18px"
+  segmento: "9px"
+  campo: "11px"
+  capsula: "12px"
+  boton: "13px"
+  nota: "14px"
+  tarjeta: "18px"
+  hero: "20px"
 spacing:
   xs: "6px"
   sm: "10px"
@@ -109,12 +112,12 @@ components:
   segmento-elegido:
     backgroundColor: "{colors.cobalto}"
     textColor: "{colors.cobalto-tinta}"
-    rounded: "{rounded.campo}"
+    rounded: "{rounded.segmento}"
     height: "44px"
   segmento:
-    backgroundColor: "{colors.fondo}"
-    textColor: "{colors.tinta}"
-    rounded: "{rounded.campo}"
+    backgroundColor: "transparent"
+    textColor: "{colors.tinta-suave}"
+    rounded: "{rounded.segmento}"
     height: "44px"
   campo:
     backgroundColor: "{colors.fondo}"
@@ -123,7 +126,7 @@ components:
     padding: "11px 12px"
     height: "44px"
   tarjeta:
-    backgroundColor: "{colors.superficie}"
+    backgroundColor: "rgba(255, 255, 255, 0.88)"
     rounded: "{rounded.tarjeta}"
     padding: "16px"
   hero:
@@ -154,15 +157,15 @@ components:
 
 **Creative North Star: "El tablero tranquilo"**
 
-Mis Quincenas es una herramienta de uso diario: se abre varias veces al día en el iPhone para ver cuánto queda, anotar un gasto o marcar un pago. Funciona como un tablero de control sereno. Las cifras se leen en un segundo y el color solo aparece para avisar algo (verde: va bien, ámbar: atención, rojo: se pasó o está vencido). Lo demás es neutro, plano y ordenado en una sola columna.
+Mis Quincenas es una herramienta de uso diario: se abre varias veces al día en el iPhone para ver cuánto queda, anotar un gasto o marcar un pago. Funciona como un tablero de control sereno. Las cifras se leen en un segundo y el color solo aparece para avisar algo (verde: va bien, ámbar: atención, rojo: se pasó o está vencido). Lo demás es neutro, con tarjetas de vidrio translúcido, y ordenado en una sola columna.
 
-El trato es **cálido y amable**: esquinas suaves, letra del sistema, frases cortas en español de Colombia que tratan de "usted", y un poco más de color en lo que sale bien (un pago marcado, una despensa completa). Esa calidez no se logra con adornos, sombras ni animaciones, sino con buen tono, buen espacio y estados claros.
+El trato es **cálido y amable**: esquinas suaves, letra del sistema, frases cortas en español de Colombia que tratan de "usted", y un poco más de color en lo que sale bien (un pago marcado, una despensa completa). Esa calidez no se logra con adornos ni animaciones, sino con buen tono, buen espacio, estados claros y un acabado de vidrio suave.
 
 La app debe abrir sin internet: no hay fuentes ni librerías externas. Tiene tema claro y oscuro, que siguen al teléfono.
 
 **Key Characteristics:**
 - Una columna de máximo 520 px, con pestañas fijas abajo y la cifra principal arriba.
-- Plana: la profundidad viene de tonos y bordes finos, no de sombras.
+- Vidrio sereno: tarjetas translúcidas con borde fino, brillo suave arriba y sombra ligera. El desenfoque solo va en las barras fijas de arriba y de abajo.
 - Azul noche para la tarjeta principal y cobalto para las acciones; verde, ámbar y rojo solo para estados.
 - Todo lo que se toca mide al menos 44 px.
 - Los campos usan letra de 16 px para que el iPhone no haga zoom.
@@ -230,18 +233,22 @@ Paleta "Cobalto": la tarjeta principal en azul noche profundo, el cobalto vivo p
 
 ## Elevation & Depth
 
-El sistema es plano. No hay sombras para dar profundidad: las capas se distinguen por el tono (fondo, superficie, verde niebla) y por bordes de 1 px. La única excepción permitida es una sombra muy suave en la columna fija de una tabla, para indicar que las demás columnas pasan por debajo.
+El sistema combina el orden y la calma operativa con el acabado de materiales iOS (Apple Glass):
+- **Barras flotantes fijas (.top, .tabs):** llevan material translúcido con desenfoque (saturate(180%) blur(20px)) para reflejar el contenido que se desplaza por debajo al hacer scroll.
+- **Tarjetas y paneles (.card, .stats):** superficie limpia translúcida (88 %) con un borde fino nítido, brillo especular superior muy suave (inset 0 1px 0) y sombra ambiental ligera. No llevan desenfoque estático (`backdrop-filter`) innecesario para evitar sobrecargar la batería y la GPU del iPhone.
+- **Controles táctiles:** la casilla de pago (.check), los botones circulares (.mini, .qnav button) y los botones fantasma (.ghost) conservan bordes sólidos y contrastados (--line) de al menos 1 o 2 px sobre la superficie, garantizando un contraste superior a 4,5:1 y visibilidad inmediata en modo claro y oscuro.
+- **La columna fija de las tablas:** permanece 100 % sólida sobre --surface con su sombra derecha, evitando que las cifras de otras columnas se transparenten al rodar la tabla.
 
-**The Flat Calm Rule.** Las tarjetas no flotan. Si algo necesita resaltar, se le cambia el tono o el peso de la letra, no se le pone sombra.
+**The Glass Discipline Rule.** El desenfoque solo vive en elementos donde el contenido pasa por detrás al rodar la pantalla. En tarjetas y formularios la profundidad proviene de la translucidez limpia, el borde especular y la elevación suave, sin quemar ciclos gráficos.
 
 ## Shapes
 
-Esquinas suaves y amables, más redondas cuanto más grande es la pieza: 10 px en campos y segmentos, 12 px en botones, 14 px en tarjetas, 18 px en la tarjeta principal, y totalmente redondas en pastillas, globitos y botones circulares (− +, ‹ ›). Los bordes son de 1 px; solo la casilla de pago lleva 2 px, para que se vea como una casilla.
+Esquinas suaves y amables, más redondas cuanto más grande es la pieza: 11 px en campos, 12 px en la cápsula de segmentos (9 px cada botón por dentro), 13 px en botones, 14 px en notas, 18 px en tarjetas, 20 px en la tarjeta principal, y totalmente redondas en pastillas, globitos y botones circulares (− +, ‹ ›). Los bordes son de 1 px; solo la casilla de pago lleva 2 px y 10 px de esquina, para que se vea como una casilla.
 
 ## Components
 
 ### Buttons
-- **Principal:** cobalto lleno con su tinta, 16 px y 700, esquinas de 12 px. Hay uno por tarjeta como máximo, para la acción que confirma algo. Desactivado se ve al 55 % de opacidad.
+- **Principal:** cobalto con un degradado suave hacia arriba, brillo y sombra ligera del mismo cobalto, con su tinta, 16 px y 700, esquinas de 13 px. Hay uno por tarjeta como máximo, para la acción que confirma algo. Desactivado se ve al 55 % de opacidad.
 - **Fantasma:** sin relleno, con borde de línea y tinta. Se usa para acciones secundarias como "La preparé" o "Copiar". Mide al menos 44 px de alto.
 - **Enlace de borrar:** texto gris subrayado de 12 px. El primer toque lo vuelve rojo y lo cambia a "¿Seguro? Borrar" durante 3,5 s; el segundo toque borra. **Nuevo:** su área de toque llega a 44 px de alto. Solo se usa para borrar o quitar: los demás enlaces, como "Olvidé mi contraseña", usan un estilo neutro.
 - **Circulares (‹ › − +):** borde de línea sobre la superficie. Las flechas son dibujos SVG de trazo redondeado, no caracteres de texto. **Nuevo:** miden al menos 40 px a la vista y 44 px de área de toque, y desactivados se ven al 40 % de opacidad.
@@ -253,21 +260,21 @@ Esquinas suaves y amables, más redondas cuanto más grande es la pieza: 10 px e
 - **Globito de alerta:** el número sobre rojo lleno, encima de la pestaña. **Nuevo:** su texto usa la tinta sobre rojo.
 
 ### Segmented control
-- Dos o tres botones del mismo ancho en una cuadrícula con 6 px entre ellos. Se usa para el medio de pago, Desayuno/Almuerzo/Comida y el tipo de alimento.
-- **Nuevo (decisión D2):** el elegido va con cobalto lleno y su tinta. Los demás van con fondo de página, borde de línea y tinta. Así se nota cuál está elegido en los dos temas.
+- Dos a siete botones del mismo ancho dentro de una cápsula gris translúcida (6 % de tinta, 4 px de relleno y 4 px entre botones). Se usa para el medio de pago, Desayuno/Almuerzo/Comida, el tipo de alimento y los días de oficina. Cada botón mide al menos 44 px de alto.
+- **Decisión D2:** el elegido va con cobalto lleno, su tinta, 700 y una sombra suave de cobalto. Los demás van sin relleno, con tinta suave. Así se nota cuál está elegido en los dos temas.
 
 ### Cards / Containers
-- **Corner Style:** 16 px.
-- **Background:** superficie, sin sombra. Sin borde en claro; en oscuro, un borde muy tenue (`--card-line`).
+- **Corner Style:** 18 px.
+- **Background:** vidrio translúcido (`--glass-bg`, 88 %) con borde fino (`--glass-border`), brillo arriba (`--glass-shine`) y sombra ligera (`--glass-shadow`). Sin desenfoque.
 - **Internal Padding:** 16 px.
-- **Tarjeta principal (hero):** azul noche lleno, 18 px de esquina, con un rótulo corto en minúsculas (14 px, 500), la cifra grande en 700 con números de ancho fijo, una línea de detalle y una barra de avance en azul cielo. Cuando el saldo es negativo, pasa a rojo con la tinta sobre rojo.
+- **Tarjeta principal (hero):** azul noche con un degradado suave y brillo arriba, 20 px de esquina, con un rótulo corto en minúsculas (14 px, 500), la cifra grande en 700 con números de ancho fijo, una línea de detalle y una barra de avance en azul cielo. Cuando el saldo es negativo, pasa a rojo con la tinta sobre rojo.
 - **Ocultar cifras:** un botón de ojo (44 px) arriba a la derecha de la tarjeta principal tapa la cifra, su línea de detalle y las tres cifras del día con puntos (•••). Es una preferencia de cada dispositivo: no se sincroniza ni va en el respaldo.
-- **Nota:** caja sin borde, de 12 px de esquina, con el color de estado sobre su fondo. Sirve para avisos y resúmenes; si se puede tocar, el texto va en 600.
+- **Nota:** caja de 14 px de esquina con el color de estado sobre su fondo y un borde fino del mismo color al 20 %. Sirve para avisos y resúmenes; si se puede tocar, el texto va en 600.
 - **Cifras del día:** las tres cifras bajo la tarjeta principal (libre, ingresos extra, gastado) van en una sola tarjeta, separadas por líneas finas verticales, no en tres cajas sueltas.
 
 ### Inputs / Fields
-- **Style:** relleno de fondo, borde de línea, 10 px de esquina, 16 px de letra, unos 45 px de alto. Los rótulos van encima, en 12 px y 600, con tinta suave.
-- **Focus:** contorno cobalto de 2 px.
+- **Style:** relleno de fondo, borde de línea, 11 px de esquina, 16 px de letra, unos 45 px de alto. Los rótulos van encima, en 12 px y 600, con tinta suave.
+- **Focus:** el borde pasa a cobalto con un anillo suave de cobalto de 3 px alrededor.
 - **Fechas y horas:** ocupan todo el ancho de su columna, con el texto a la izquierda.
 
 ### Navigation
@@ -275,7 +282,7 @@ Esquinas suaves y amables, más redondas cuanto más grande es la pieza: 10 px e
 - **Selector de sección (arriba):** "Mis Quincenas" y "Mis comidas" como texto de 17 px. Queda fijo arriba al desplazarse, con el mismo fondo translúcido de la barra de abajo y una línea fina debajo, para cambiar de sección sin volver a subir. El elegido va en tinta y 700, subrayado con una línea verde de 2 px. **Nuevo:** área de toque de 44 px.
 
 ### Casilla de pago
-La casilla cuadrada, con esquinas de 9 px, que marca un pago como hecho. Vacía: borde de línea de 2 px. Marcada: verde lleno con un chulo en la tinta sobre verde. **Nuevo:** mide 36 px a la vista y 44 px de área de toque, y el chulo nunca va en `#fff` fijo.
+La casilla cuadrada, con esquinas de 10 px, que marca un pago como hecho. Vacía: borde de línea de 2 px. Marcada: verde lleno con un chulo en la tinta sobre verde. **Nuevo:** mide 36 px a la vista y 44 px de área de toque, y el chulo nunca va en `#fff` fijo.
 
 ## Do's and Don'ts
 
@@ -290,7 +297,8 @@ La casilla cuadrada, con esquinas de 9 px, que marca un pago como hecho. Vacía:
 ### Don't:
 - **Don't** escribir `#fff` ni ningún color fijo sobre un fondo que cambia en modo oscuro.
 - **Don't** usar solo el verde niebla para mostrar que algo está elegido.
-- **Don't** agregar sombras, degradados decorativos ni animaciones que no expliquen un cambio. La única animación es el avance de las barras, y se apaga si el teléfono pide reducir el movimiento.
+- **Don't** poner desenfoque (`backdrop-filter`) en tarjetas, botones o campos: solo va en las barras fijas de arriba y de abajo. Las sombras van suaves (las de `--glass-shadow`), nunca fuertes ni de colores.
+- **Don't** agregar animaciones que no expliquen un cambio. La única animación es el avance de las barras, y se apaga si el teléfono pide reducir el movimiento.
 - **Don't** agregar fuentes, íconos ni librerías externas: la app debe abrir sin internet.
 - **Don't** renombrar los `id`, los atributos `data-*` ni las clases que usa la programación (`.del`, `.check`, `.tabs button`, `.neg`, `.sure`, `.hecho`, `.alerta`) al cambiar estilos.
 - **Don't** usar el rojo ni el estilo de borrar en acciones que no destruyen nada.
