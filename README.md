@@ -127,6 +127,15 @@ git push
 
 GitHub Pages se actualiza solo en uno o dos minutos. En cada dispositivo, al abrir la app se descargan todos los archivos nuevos en segundo plano y la app se recarga sola una vez. La versión instalada se ve abajo en la pestaña **Más**.
 
+## Avisos del banco
+
+Un Atajo del iPhone (Shortcuts → Automation → Message) envía a la nube cada SMS de movimiento del banco. La app lo muestra en **Hoy**, en la tarjeta "Por confirmar", y solo cuenta en la quincena cuando usted lo confirma.
+
+- El Atajo inicia sesión con la cuenta de la app y crea un documento en `users/{uid}/avisos` con dos campos: `texto` (el SMS) y `fecha` (`AAAA-MM-DD`). Por eso necesita la sincronización activa.
+- `Motor.leerAvisoBanco` saca el monto, el tipo, la hora y el lugar. Acepta transferencias, compras y retiros. Los abonos (plata que entra), los avisos de ingreso a canales y los códigos se ignoran y se borran solos.
+- **Confirmar** pide la categoría, guarda el gasto y borra el aviso. **Descartar** solo borra el aviso.
+- Los avisos se guardan en la tienda `avisos`, que se sincroniza y entra en el respaldo.
+
 ## Recordatorios en el calendario
 
 En la pestaña **Pagos**, "Crear recordatorios" genera un archivo `.ics` con los pagos pendientes de los próximos seis meses y los días en que hay que guardar plata, a la hora que se elija (por defecto, 6 de la tarde). En el iPhone, envíese el archivo por correo, ábralo en la app Mail y toque **Agregar todo**. Cada evento tiene un identificador fijo, así que al importarlo de nuevo se actualiza en lugar de duplicarse.

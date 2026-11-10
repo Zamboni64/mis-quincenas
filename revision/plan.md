@@ -104,6 +104,14 @@ Antes de este grupo, el usuario guarda un respaldo desde la app.
 - [x] Almuerzos fuera por días de la semana (Lun a Dom): se marcan los días de oficina y Claude pone ese almuerzo como "fuera", con desayuno rápido y comida para la noche. Se guarda { semana, dias, cuales }; los datos viejos con solo el número siguen sirviendo.
 - [x] Sobras en el menú: Claude marca "recalentar" en cada día; la comida que sobra dice "solo caliéntelo" y "Ya me lo comí" no vuelve a descontar. La preparación original pide 2 o más porciones. Menús sin la marca: se adivina en almuerzos y comidas que repiten plato hasta 2 días después (nunca en desayunos).
 
+### Grupo 9 · Avisos del banco por SMS · rama `avisos-davivienda` · pedido por el usuario
+Un Atajo del iPhone envía a la nube el SMS del banco. La app lo muestra en Hoy como "Por confirmar" y solo al confirmar se vuelve gasto.
+- [x] Tienda nueva `avisos` (`{ id, texto, recibido, mod }`): `VERSION` 5 en `almacen.js`, `TIENDAS` en `nube.js`, respaldo y restauración en `app.js`. Probado en local con datos inventados: un respaldo viejo sin avisos se restaura bien. · Claude
+- [x] Lector del SMS: `Motor.leerAvisoBanco(texto)` devuelve `{ valor, tipo, hora, lugar }` o `null`. Acepta transferencias, compras y retiros; ignora los "Abono" (plata que entra), los ingresos a canales y los códigos. El SMS no trae fecha. Probado con mensajes inventados. · Claude
+- [x] Tarjeta "Por confirmar" en Hoy (`#cardAvisos`, `renderAvisos` en `app.js`): pide categoría; Confirmar crea el gasto con `nuevoGasto` y borra el aviso; Descartar pide un segundo toque. Los avisos que no son un movimiento se borran solos al cargar. El aviso guarda `{ id, texto, fecha, mod }`, con `fecha` en `AAAA-MM-DD` puesta por el Atajo. Lleva unas reglas `.aviso` en `css/estilos.css`: Gemini, revíselas. · Claude
+- [ ] Atajo en el iPhone y revisar que las reglas de Firestore acepten la tienda nueva. El Atajo inicia sesión por la API de Firebase y crea un documento en `users/{uid}/avisos` con solo `texto` y `fecha`; como no pone `id`, `nube.js` lo toma del nombre del documento (`datosDe`). Sin probar todavía con la nube real.
+- [ ] Prueba con una transferencia real. Versión 3.24 publicada el 2026-11-10; el Atajo ya guarda en la nube.
+
 ## Descartado o aplazado
 
 - **4.2, cortar la tabla del plan a 6 meses:** ya se corta sola cuando la deuda llega a cero.

@@ -39,7 +39,7 @@ El usuario trabaja con Claude (app de escritorio) y con Gemini (Antigravity) sob
   - guarda en IndexedDB (`js/almacen.js`);
   - sube a Firestore si hay sesión (`js/nube.js`).
 - Borrar **no elimina**: marca `borrado: true` y se filtra con `vivo()`. En la sincronización gana el `mod` más reciente.
-- Tiendas: `config, gastos, ingresos, pagosHechos, ajustes, despensa, recetas, menu, freidora`. Para agregar una tienda nueva hay que subir `VERSION` en `almacen.js` y añadirla también a `TIENDAS` en `nube.js`.
+- Tiendas: `config, gastos, ingresos, pagosHechos, ajustes, despensa, recetas, menu, freidora, avisos`. Para agregar una tienda nueva hay que subir `VERSION` en `almacen.js` y añadirla también a `TIENDAS` en `nube.js`.
 - Todo dato nuevo debe ir también en el respaldo JSON (Más → Respaldo) y restaurarse sin romper respaldos viejos.
 - Antes de tocar `almacen.js`, `nube.js` o el formato de los datos, pídale al usuario que guarde un respaldo desde la app.
 

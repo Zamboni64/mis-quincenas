@@ -68,6 +68,13 @@
     <button class="note warn" id="notaDespensa" type="button" hidden></button>
     <button class="note plain" id="notaRespaldo" type="button" hidden></button>
 
+    <div class="card" id="cardAvisos" hidden>
+      <h2>Por confirmar</h2>
+      <p class="small muted" style="margin-bottom:4px">Movimientos que avisó su banco. No cuentan en la quincena hasta que los confirme.</p>
+      <div id="listaAvisos"></div>
+      <div class="small muted" id="avMsg" role="status"></div>
+    </div>
+
     <div class="card">
       <h2>Anotar un gasto</h2>
       <form id="fGasto" autocomplete="off">

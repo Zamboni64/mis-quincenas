@@ -6,7 +6,7 @@
    Un registro borrado no se elimina: se marca con `borrado: true`, para que el borrado también viaje a los demás dispositivos. */
 const VERSION_SDK = "10.12.2";
 const BASE = "https://www.gstatic.com/firebasejs/" + VERSION_SDK + "/";
-const TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu", "freidora"];
+const TIENDAS = ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu", "freidora", "avisos"];
 const CLAVE_UID = "mq-sync-uid"; // recuerda con qué cuenta ya se enlazó este dispositivo
 
 const estado = { disponible: false, usuario: null, sincronizando: false, ultima: null, error: "" };
@@ -17,6 +17,8 @@ let avisoDatos = null;
 function avisarDatos() { clearTimeout(avisoDatos); avisoDatos = setTimeout(function () { if (ganchos.alCambiarNube) ganchos.alCambiarNube(); }, 150); }
 function ruta(t) { return F.collection(db, "users", usuario.uid, t); }
 function esSincronizable(t, x) { return !(t === "config" && x.id !== "datos"); }
+// Los avisos del banco los crea un Atajo del iPhone, que no sabe poner el campo `id`: se toma del nombre del documento.
+function datosDe(d) { const r = d.data(); if (!r.id) r.id = d.id; return r; }
 
 /* Compara todo lo local con todo lo de la nube y copia en cada dirección lo que esté más reciente. */
 async function reconciliar() {
@@ -28,7 +30,7 @@ async function reconciliar() {
     let huboCambios = false;
     for (const t of TIENDAS) {
       const snap = await F.getDocs(ruta(t));
-      const remoto = {}; snap.forEach(function (d) { remoto[d.id] = d.data(); });
+      const remoto = {}; snap.forEach(function (d) { remoto[d.id] = datosDe(d); });
       const local = {}; (await Almacen.todos(t)).filter(function (x) { return esSincronizable(t, x); }).forEach(function (x) { local[x.id] = x; });
       // 1) de la nube al dispositivo
       for (const id in remoto) {
@@ -65,7 +67,7 @@ function escuchar() {
       if (snap.metadata && snap.metadata.hasPendingWrites) return; // es el eco de un cambio hecho aquí mismo
       const local = {}; (await Almacen.todos(t)).forEach(function (x) { local[x.id] = x; });
       let cambio = false;
-      for (const d of snap.docs) { const r = d.data(), l = local[d.id];
+      for (const d of snap.docs) { const r = datosDe(d), l = local[d.id];
         if (!l || (r.mod || "") > (l.mod || "")) { await Almacen.poner(t, r); cambio = true; } }
       if (cambio) { estado.ultima = new Date().toISOString(); avisarDatos(); avisarEstado(); }
     }, function () {}));

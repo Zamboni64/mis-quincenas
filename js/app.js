@@ -4,7 +4,7 @@
    - Este archivo lee los datos a memoria (objeto S), dibuja las pantallas y guarda cada cambio. */
 (function () {
 "use strict";
-var VERSION_APP = "3.23";
+var VERSION_APP = "3.24";
 var MES = Motor.MES, quincenaDe = Motor.quincenaDe, diaPago = Motor.diaPago;
 var CATS = ["Mercado", "Comidas fuera y domicilios", "Transporte y gasolina", "Moto (mantenimiento)", "Aseo y hogar", "Salud y farmacia", "Ropa y cuidado personal", "Ocio y salidas", "Regalos y familia", "Otros"];
 // Campos editables de "Mis datos": [clave, etiqueta, tipo]. Tipo "%" = porcentaje, "n" = número simple, sin tipo = pesos.
@@ -34,7 +34,7 @@ function anteriorQ(q) { var d = parse(q); return d.getDate() === 25 ? iso(new Da
 function esMovil() { return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
 
 /* ---------- estado en memoria ---------- */
-var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, casinos: {}, apartados: {}, despensa: [], recetas: [], menu: [], freidora: [] };
+var S = { lista: false, q: quincenaDe(hoyISO()), P: null, calc: null, gastos: [], ingresos: [], hechos: {}, ajustes: {}, casinos: {}, apartados: {}, despensa: [], recetas: [], menu: [], freidora: [], avisos: [] };
 function recalcular() { S.calc = S.P ? Motor.calcular(S.P, S.ingresos, S.casinos, S.apartados) : null; }
 function filaQ(q) { return S.calc ? S.calc.porFecha[q] : null; }
 function gastosDe(q) { return S.gastos.filter(function (g) { return g.quincena === q; }); }
@@ -227,7 +227,41 @@ function renderFijos() {
       '<div class="amt num">' + money(x.valor) + '</div><button class="del" data-fijo="' + esc(x.id) + '">Quitar</button></div>'; }).join("") : '<div class="empty">No ha agregado gastos fijos.</div>';
 }
 var rendersExtra = []; // pantallas definidas en otros archivos (por ejemplo comida.js)
-function render() { renderHoy(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); renderSync(); rendersExtra.forEach(function (f) { f(); }); }
+/* Avisos del banco: mensajes que un Atajo del iPhone envió a la nube. Cada uno se muestra en Hoy hasta que usted lo confirma
+   (se vuelve un gasto) o lo descarta. Mientras tanto no entra en ninguna cuenta. */
+function fechaAviso(a) { // el SMS no trae fecha: se usa la que puso el Atajo, o el día en que llegó
+  if (/^\d{4}-\d{2}-\d{2}$/.test(a.fecha || "")) return a.fecha;
+  var d = new Date(a.mod || ""); return isNaN(d) ? hoyISO() : iso(d);
+}
+function renderAvisos() {
+  var caja = $("listaAvisos"), llave = S.avisos.map(function (a) { return a.id; }).join(",");
+  $("cardAvisos").hidden = !(S.P && S.avisos.length);
+  if (caja.dataset.llave === llave) return; // si no cambió la lista no se redibuja, para no borrar lo que usted esté escribiendo
+  caja.dataset.llave = llave;
+  caja.innerHTML = S.avisos.map(function (a) {
+    var m = Motor.leerAvisoBanco(a.texto), f = fechaAviso(a), enApp = /app davivienda/i.test(m.lugar);
+    return '<div class="aviso" data-aviso="' + esc(a.id) + '"><div class="item"><div class="tx"><b>' + esc(m.tipo) + '</b><span>' + esc(corto(f) + (m.hora ? " · " + m.hora : "") + (m.lugar && !enApp ? " · " + m.lugar : "")) + '</span></div>' +
+      '<div class="amt num">' + money(m.valor) + '</div></div>' +
+      '<div class="row2"><select class="avCat" aria-label="Categoría"><option value="">Categoría</option>' + CATS.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("") + '</select>' +
+      '<input class="avDesc" maxlength="80" aria-label="Descripción" placeholder="Descripción" value="' + esc(enApp ? "" : m.lugar) + '"></div>' +
+      '<div class="row2"><button class="ghost avOk" type="button">Confirmar</button><button class="del avNo" type="button">Descartar</button></div></div>';
+  }).join("");
+}
+$("listaAvisos").addEventListener("click", function (e) {
+  var b = e.target.closest("button"), caja = b && b.closest(".aviso"), msg = $("avMsg"); if (!caja) return;
+  var id = caja.dataset.aviso, a = S.avisos.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+  function quitar() { return eliminar("avisos", id).then(function () { S.avisos = S.avisos.filter(function (x) { return x.id !== id; }); recalcular(); render(); }); }
+  if (b.classList.contains("avNo")) { // descartar pide confirmación en el mismo botón, igual que borrar
+    if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "¿Seguro? Descartar"; setTimeout(function () { b.classList.remove("sure"); b.textContent = "Descartar"; }, 3500); return; }
+    b.disabled = true; quitar().then(function () { msg.textContent = "Descartado."; }).catch(function () { b.disabled = false; fallo(msg); }); return; }
+  var cat = caja.querySelector(".avCat"), m = Motor.leerAvisoBanco(a.texto);
+  if (!cat.value) { msg.textContent = "Elija la categoría antes de confirmar."; cat.focus(); return; }
+  b.disabled = true;
+  nuevoGasto({ fecha: fechaAviso(a), categoria: cat.value, descripcion: caja.querySelector(".avDesc").value.trim() || m.tipo, valor: m.valor })
+    .then(function (g) { return quitar().then(function () { msg.textContent = "Guardado: " + money(g.valor) + (g.quincena !== S.q ? " (quedó en el pago del " + corto(g.quincena) + ")" : "") + "."; }); })
+    .catch(function () { b.disabled = false; fallo(msg); });
+});
+function render() { renderHoy(); renderAvisos(); renderPagos(); renderIngresos(); renderPlan(); renderDatos(); renderFijos(); renderSync(); rendersExtra.forEach(function (f) { f(); }); }
 
 /* ---------- cargar y guardar ---------- */
 function aplicar(todo) { // pasa lo leído del almacén a la memoria
@@ -238,6 +272,9 @@ function aplicar(todo) { // pasa lo leído del almacén a la memoria
   S.recetas = (todo.recetas || []).filter(vivo);
   S.menu = (todo.menu || []).filter(vivo);
   S.freidora = (todo.freidora || []).filter(vivo);
+  // Mensajes del banco que llegaron por la nube y esperan que usted los confirme. Los que no son un movimiento de plata
+  // (códigos, ingresos a canales, abonos) se borran de una vez, para que su texto no se quede guardado.
+  S.avisos = (todo.avisos || []).filter(vivo).filter(function (a) { if (Motor.leerAvisoBanco(a.texto)) return true; eliminar("avisos", a.id).catch(function () {}); return false; });
   S.ingresos = (todo.ingresos || []).filter(vivo).map(function (x) { if (!x.destino) x.destino = "gastar"; return x; });
   S.hechos = {}; (todo.pagosHechos || []).filter(vivo).forEach(function (x) { S.hechos[x.id] = true; });
   S.ajustes = {}; S.casinos = {}; S.apartados = {}; (todo.ajustes || []).filter(vivo).forEach(function (x) {
@@ -451,7 +488,7 @@ $("crearCal").addEventListener("click", function () {
 });
 
 /* ---------- respaldo ---------- */
-function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, casinos: S.casinos, apartados: S.apartados, despensa: S.despensa, recetas: S.recetas, menu: S.menu, freidora: S.freidora }; }
+function armarRespaldo() { return { app: "mis-quincenas", version: 1, exportado: new Date().toISOString(), datos: S.P, gastos: S.gastos, ingresos: S.ingresos, pagosHechos: Object.keys(S.hechos), ajustes: S.ajustes, casinos: S.casinos, apartados: S.apartados, despensa: S.despensa, recetas: S.recetas, menu: S.menu, freidora: S.freidora, avisos: S.avisos }; }
 $("guardarResp").addEventListener("click", function () { var msg = $("respMsg");
   if (!S.P) { msg.textContent = "Aún no hay datos para respaldar."; return; }
   entregar("respaldo-mis-quincenas-" + hoyISO() + ".json", "application/json", JSON.stringify(armarRespaldo(), null, 1))
@@ -471,7 +508,8 @@ function leerRespaldo(texto) { // valida el archivo y lo convierte al formato de
     despensa: (r.despensa || []).filter(function (x) { return x && x.id && x.nombre; }),
     recetas: (r.recetas || []).filter(function (x) { return x && x.id && x.nombre; }),
     menu: (r.menu || []).filter(function (x) { return x && x.id; }),
-    freidora: (r.freidora || []).filter(function (x) { return x && x.id && x.nombre; }) };
+    freidora: (r.freidora || []).filter(function (x) { return x && x.id && x.nombre; }),
+    avisos: (r.avisos || []).filter(function (x) { return x && x.id && typeof x.texto === "string"; }) }; // los respaldos viejos no lo traen: queda vacío
 }
 var avisoResp = $("respMsg");
 function pedirArchivo(dondeAvisar) { avisoResp = dondeAvisar; $("archivoResp").value = ""; $("archivoResp").click(); }
@@ -487,7 +525,7 @@ $("archivoResp").addEventListener("change", function () {
   f.text().then(function (t) { var todo = leerRespaldo(t), m = ahora();
     // Cada registro del respaldo queda como el más reciente; lo que hay hoy y no viene en el respaldo se marca como borrado,
     // para que la nube y los demás dispositivos queden igual que el respaldo.
-    ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu", "freidora"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
+    ["config", "gastos", "ingresos", "pagosHechos", "ajustes", "despensa", "recetas", "menu", "freidora", "avisos"].forEach(function (k) { todo[k].forEach(function (x) { x.mod = m; }); });
     var enResp = function (k) { var o = {}; todo[k].forEach(function (x) { o[x.id] = true; }); return o; };
     var g = enResp("gastos"), i = enResp("ingresos"), p = enResp("pagosHechos"), a = enResp("ajustes");
     S.gastos.forEach(function (x) { if (!g[x.id]) todo.gastos.push({ id: x.id, borrado: true, mod: m }); });
@@ -496,7 +534,7 @@ $("archivoResp").addEventListener("change", function () {
     Object.keys(S.ajustes).forEach(function (id) { if (!a[id]) todo.ajustes.push({ id: id, borrado: true, mod: m }); });
     Object.keys(S.casinos).forEach(function (q) { if (!a["casino-" + q]) todo.ajustes.push({ id: "casino-" + q, borrado: true, mod: m }); });
     Object.keys(S.apartados).forEach(function (q) { if (!a["apartado-" + q]) todo.ajustes.push({ id: "apartado-" + q, borrado: true, mod: m }); });
-    ["despensa", "recetas", "menu", "freidora"].forEach(function (k) { var hay = enResp(k); S[k].forEach(function (x) { if (!hay[x.id]) todo[k].push({ id: x.id, borrado: true, mod: m }); }); });
+    ["despensa", "recetas", "menu", "freidora", "avisos"].forEach(function (k) { var hay = enResp(k); S[k].forEach(function (x) { if (!hay[x.id]) todo[k].push({ id: x.id, borrado: true, mod: m }); }); });
     return Almacen.reemplazarTodo(todo).then(function () { aplicar(todo); marcarRespaldo(); if (window.Nube) Nube.sincronizar();
       todo.gastos = todo.gastos.filter(vivo); todo.ingresos = todo.ingresos.filter(vivo);
     msg.textContent = "Respaldo cargado: " + todo.gastos.length + " gasto(s) y " + todo.ingresos.length + " ingreso(s)."; }); })

@@ -247,6 +247,21 @@ function construirCalendario(d){
   L.push("END:VCALENDAR");
   return {texto:L.join("\r\n")+"\r\n",eventos:n}}
 
-return {calcular:calcular,quincenaDe:quincenaDe,diaPago:diaPago,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro,construirCalendario:construirCalendario};
+/* Lee un SMS de Davivienda y saca el monto, el tipo de movimiento, la hora y el lugar.
+   Forma del mensaje: "DAVIVIENDA <tipo> $<monto>, Cta ...,Hora HH:MM,Lugar <lugar>."
+   Devuelve null si no es un movimiento (códigos, ingreso a PSE) o si es plata que entró ("Abono").
+   El SMS trae la hora pero no la fecha: la fecha la pone quien lo recibe. */
+function leerAvisoBanco(texto){
+  var t=String(texto||"").replace(/\s+/g," ").trim();
+  var p=/^DAVIVIENDA (.+?)\$\s?([\d.,]+)/i.exec(t);if(!p)return null;
+  var tipo=p[1].replace(/^Descuento /i,"").replace(/[ .,]+$/,"");
+  if(/abono|consignaci|recibi|ingreso/i.test(tipo))return null;
+  // Quita la coma final, los centavos si vienen y los separadores de miles: "$100,000," queda en 100000.
+  var valor=parseInt(p[2].replace(/[.,]+$/,"").replace(/[.,]\d{2}$/,"").replace(/[.,]/g,""),10);if(!valor)return null;
+  var h=/Hora (\d{2}:\d{2})/i.exec(t),l=/Lugar (.+?)\.?$/i.exec(t);
+  return {valor:valor,tipo:tipo,hora:h?h[1]:"",lugar:l?l[1]:""};
+}
+
+return {calcular:calcular,quincenaDe:quincenaDe,diaPago:diaPago,mk:mk,mesTxt:mesTxt,MES:MES,FIRST:FIRST,construirLibro:construirLibro,construirCalendario:construirCalendario,leerAvisoBanco:leerAvisoBanco};
 })();
 if(typeof module!=="undefined")module.exports=Motor;
